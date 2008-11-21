@@ -1,3 +1,4 @@
+import psycopg2
 
 class InstanceMethod(object):
     """
