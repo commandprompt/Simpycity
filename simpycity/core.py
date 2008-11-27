@@ -32,6 +32,7 @@ class meta_query(object):
         self.keyargs = kwargs
         if 'returns' in kwargs:
             self.columns = kwargs['returns']
+            del(kwargs['returns'])
         else:
             self.columns = [] # an empty set.
         
@@ -129,7 +130,7 @@ def Raw(query, args=[],return_type=None):
         def __init__(self):
             # Disable the standard init
             pass
-    return sql_function()
+    return sql_function
     
 def Query(name, where=[], return_type=None):
     where_list = None
@@ -195,7 +196,7 @@ class SimpleResultSet(object):
     def rollback(self):
         return self.conn.rollback()
 
-class TypedResultSet(object):
+class TypedResultSet(SimpleResultSet):
     
     def __init__(self,cursor,i_type):
         self.cursor=cursor
@@ -207,7 +208,7 @@ class TypedResultSet(object):
             yield o
             row = self.cursor.fetchone()
             if row is None:
-                raise StopException()
+                raise StopIteration()
             o = i_type(row)
 
 
