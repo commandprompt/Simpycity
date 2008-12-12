@@ -1,9 +1,9 @@
 import psycopg2
 
 class InstanceMethod(object):
-    """
-    A basic object that the SimpleModel uses to determine raw functions from 
-    functions that should be mapped by SimpleModel.
+
+    """InstanceMethods are a requirement for the SimpleModel object. 
+    Instancemethods are used to map internal arguments for a 
     """
     def __init__(self, func, args=[], return_type=None):
         self.name = func
@@ -91,6 +91,8 @@ class SimpleModel(object):
         except TypeError:
             # not an Instance Method, just return
             return attr
+    def set_col(self,col,val):
+        self.col[col] = val
 
 class FunctionError(BaseException):
     """

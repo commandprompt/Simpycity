@@ -27,12 +27,14 @@ class meta_query(object):
                 self.query = ''
         except AttributeError:
             self.query = ''
+        print "Simpycity Meta Query: %s" % self.query
         self.call_list = []
         self.args = in_args
         self.keyargs = kwargs
-        if 'returns' in kwargs:
-            self.columns = kwargs['returns']
-            del(kwargs['returns'])
+        if 'columns' in kwargs:
+            self.columns = kwargs['columns']
+            del(self.keyargs['columns'])
+#            del(kwargs['columns'])
         else:
             self.columns = [] # an empty set.
         
@@ -41,12 +43,15 @@ class meta_query(object):
             # Eventually, we'll check it against the return object.
             # Until then, we just assume the user knows what they're 
             # doing.
-            self.cols = ",".join(["%s" for x in range(0,len(self.columns))])
+            self.cols = ",".join([x for x in self.columns])
+            print self.cols
+            
             
         else:
             self.cols = "*"
-            
-        if self.arg_count >= 1:
+        print "Simpycity Meta Query Arg Count: %s" % self.arg_count    
+
+        if self.args >= 1:
             if len(self.args) < len(self.creation_args) \
                 and len(self.keyargs) < len(self.creation_args) \
                 and len(self.keyargs) + len(self.args) < len(self.creation_args):
@@ -93,6 +98,7 @@ class meta_query(object):
             
     def __execute__(self):
         self.form_query()
+        app_conf = config['app_conf']
         conn = psycopg2.connect(
             "host=%s port=%s dbname=%s user=%s password=%s" % (
                 config.host,
@@ -105,8 +111,13 @@ class meta_query(object):
         cursor = conn.cursor(cursor_factory=extras.DictCursor)
         print "Simpycity Query: %s" % (self.query)
         print "Simpycity Call List: %s" % (self.call_list)
-        rs = cursor.execute(self.query, self.call_list)
-        self.rs = SimpleResultSet(cursor)
+
+        try:
+            rs = cursor.execute(self.query, self.call_list)
+        except psycopg2.InternalError, e:
+            raise FunctionError(e)
+            
+        self.rs = TypedResultSet(cursor,self.r_type)        
         self.rs.conn = conn
 
     def form_query(self):
@@ -120,16 +131,21 @@ class meta_query(object):
         if self.rs is not None:
             self.rs.rollback()
 
-def Raw(query, args=[],return_type=None):
+def Raw(sql, args=[],return_type=None):
     # Just let us do raw SQL, kthx.
     
     class sql_function(meta_query):
-        query = query
+        query = sql
         creation_args = args
         r_type = return_type
-        def __init__(self):
-            # Disable the standard init
-            pass
+        arg_count = len(args)
+        print "Raw Query Args Length: %s" % arg_count
+        if arg_count == 1:
+            print "Found an argument: %s " % args[0]
+        def form_query(self):
+            # self.cols is ignored - unnecessary.
+            
+            self.query = sql
     return sql_function
     
 def Query(name, where=[], return_type=None):
@@ -150,6 +166,7 @@ def Query(name, where=[], return_type=None):
             self.query = "SELECT " + self.cols + " FROM " + self.name 
             if self.w_list:
                 self.query += " WHERE " + " AND ".join(self.w_list)
+    return sql_function
 
 def Function(name, args=[], return_type=None):
     if len(args) >= 1:
@@ -173,7 +190,7 @@ def Function(name, args=[], return_type=None):
     
 class SimpleResultSet(object):
     
-    def __init__(self, cursor):
+    def __init__(self, cursor,*args,**kwargs):
         self.cursor = cursor
     def __iter__(self):
         row = self.cursor.fetchone()
@@ -188,28 +205,34 @@ class SimpleResultSet(object):
         else:
             return 0
     def next(self):
-        return self.cursor.fetchone()
+        return self.wrapper(self.cursor.fetchone())
     def fetchone(self):
-        return self.cursor.fetchone()
+        return self.wrapper(self.cursor.fetchone())
     def commit(self):
         return self.conn.commit()
     def rollback(self):
         return self.conn.rollback()
+    def wrapper(self,item):
+        return item    
 
 class TypedResultSet(SimpleResultSet):
     
-    def __init__(self,cursor,i_type):
+    def __init__(self,cursor,i_type,*args,**kwargs):
         self.cursor=cursor
         self.type=i_type
     def __iter__(self):
         row = self.cursor.fetchone()
         while row:
-            o = i_type(row)
+            o = self.wrapper(row)
             yield o
             row = self.cursor.fetchone()
             if row is None:
                 raise StopIteration()
-            o = i_type(row)
-
-
+    def wrapper(self,item):
     
+        if self.type is None:
+            return item
+        i = self.type()
+        for col in item.keys():
+            i.set_col(col,item[col])
+        return i
