@@ -1,3 +1,4 @@
+from simpycity.core import Function
 import psycopg2
 
 class InstanceMethod(object):

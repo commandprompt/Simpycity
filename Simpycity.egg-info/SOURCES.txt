@@ -6,6 +6,7 @@ Simpycity.egg-info/dependency_links.txt
 Simpycity.egg-info/requires.txt
 Simpycity.egg-info/top_level.txt
 Simpycity.egg-info/zip-safe
+dist/Simpycity-0.1-py2.6.egg
 simpycity/__init__.py
 simpycity/config.py
 simpycity/core.py
