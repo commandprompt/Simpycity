@@ -98,7 +98,7 @@ class meta_query(object):
             
     def __execute__(self):
         self.form_query()
-        app_conf = config['app_conf']
+
         conn = psycopg2.connect(
             "host=%s port=%s dbname=%s user=%s password=%s" % (
                 config.host,
