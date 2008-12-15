@@ -236,3 +236,13 @@ class TypedResultSet(SimpleResultSet):
         for col in item.keys():
             i.set_col(col,item[col])
         return i
+        
+class FunctionError(BaseException):
+    """
+    Bare exception, used for naming purposes only.
+    """
+    pass
+
+class ProceduralException(BaseException):
+    
+    pass

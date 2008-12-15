@@ -1,4 +1,4 @@
-from simpycity.core import Function
+from simpycity.core import Function, FunctionError, ProceduralException
 import psycopg2
 
 class InstanceMethod(object):
@@ -95,12 +95,4 @@ class SimpleModel(object):
     def set_col(self,col,val):
         self.col[col] = val
 
-class FunctionError(BaseException):
-    """
-    Bare exception, used for naming purposes only.
-    """
-    pass
 
-class ProceduralException(BaseException):
-    
-    pass
