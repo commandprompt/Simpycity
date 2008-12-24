@@ -21,6 +21,14 @@ import config
 
 class meta_query(object):
     def __init__(self, *in_args, **kwargs):
+        
+        """
+        Initializor for a meta_query/sql_function-style object.
+        handle is a psycopg-or-equivalent database handle that has been handed
+        to Simpycity.
+        fold_output is 
+        """
+        
         self.rs = None
         try:
             if not self.query:
@@ -30,13 +38,34 @@ class meta_query(object):
         print "Simpycity Meta Query: %s" % self.query
         self.call_list = []
         self.args = in_args
+        
         self.keyargs = kwargs
-        if 'columns' in kwargs:
-            self.columns = kwargs['columns']
-            del(self.keyargs['columns'])
-#            del(kwargs['columns'])
+        
+        
+        if 'options' in kwargs:
+            
+            opts = kwargs['options']
+            del(self.keyargs['options'])
+            try:
+                self.columns = opts['columns']
+            except KeyError:
+                pass
+            
+            try:
+                self.handle = opts['handle']
+                print "Simpycity core.__init__: Found handle."
+            except KeyError:
+                pass
+                
+            try:
+                self.condense = opts['fold_output']
+            except KeyError:
+                pass
+            
         else:
             self.columns = [] # an empty set.
+            self.handle = None
+            self.condense=None
         
         if len(self.columns) >= 1:
             # we are limiting the return type.
@@ -49,7 +78,7 @@ class meta_query(object):
             
         else:
             self.cols = "*"
-        print "Simpycity Meta Query Arg Count: %s" % self.arg_count    
+        print "Simpycity Meta Query Arg Count: %s" % self.arg_count
 
         if self.args >= 1:
             if len(self.args) < len(self.creation_args) \
@@ -75,6 +104,7 @@ class meta_query(object):
         self.__execute__()
         
     def __repr__(self):
+        self.form_query()
         if self.query:
             return self.query % self.call_list
             
@@ -99,15 +129,22 @@ class meta_query(object):
     def __execute__(self):
         self.form_query()
 
-        conn = psycopg2.connect(
-            "host=%s port=%s dbname=%s user=%s password=%s" % (
-                config.host,
-                config.port,
-                config.database,
-                config.user,
-                config.password
+        if self.handle is None:
+            print "Simpycity __execute__: Did not find handle, creating new.. "
+            conn = psycopg2.connect(
+                "host=%s port=%s dbname=%s user=%s password=%s" % (
+                    config.host,
+                    config.port,
+                    config.database,
+                    config.user,
+                    config.password
+                ),
+                
             )
-        )
+        else:
+            print "Simpycity __execute__: Found handle, using."
+            conn = self.handle
+            
         cursor = conn.cursor(cursor_factory=extras.DictCursor)
         print "Simpycity Query: %s" % (self.query)
         print "Simpycity Call List: %s" % (self.call_list)
@@ -131,7 +168,7 @@ class meta_query(object):
         if self.rs is not None:
             self.rs.rollback()
 
-def Raw(sql, args=[],return_type=None):
+def Raw(sql, args=[], return_type=None):
     # Just let us do raw SQL, kthx.
     
     class sql_function(meta_query):

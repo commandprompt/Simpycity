@@ -1,5 +1,42 @@
 from simpycity.core import Function, FunctionError, ProceduralException
+from simpycity import config
 import psycopg2
+
+class Construct(object):
+    
+    def __init__(self, l_config=None, handle=None, *args,**kwargs):
+        """
+        Sets up the objects' internal column.
+        Tests for the presence of a primary key, and attempts to load a
+        description using it.
+        """
+        self.col = {}    
+        if key is not None:
+            self.__load_by_key__(key, *args, **kwargs)
+            
+        if handle is not None:
+            print "Simpycity __init__: Found handle."
+            self.handle = handle
+        else:
+            if l_config is not None:
+                self.config = l_config
+            else:
+                self.config = config
+            print "Simpycity __init__: Did not find handle - forging."
+            self.handle = psycopg2.connect(
+                    "host=%s port=%s dbname=%s user=%s password=%s" % (
+                        self.config.host,
+                        self.config.port,
+                        self.config.database,
+                        self.config.user,
+                        self.config.password
+                    )
+                )
+    
+    def commit(self):
+        if self.handle is not None:
+            self.handle.commit()
+        raise AttributeError("Cannot call commit without localized handle.")
 
 class InstanceMethod(object):
 
@@ -13,7 +50,7 @@ class InstanceMethod(object):
         self.function = Function(self.name,args,return_type)
 
 
-class SimpleModel(object):
+class SimpleModel(Construct):
     
     """
     The basic simple model class.
@@ -25,7 +62,7 @@ class SimpleModel(object):
     
     """
     
-    def __init__(self, key=None, *args,**kwargs):
+    def __init__(self, key=None, l_config=None, handle=None, *args,**kwargs):
         """
         Sets up the objects' internal column.
         Tests for the presence of a primary key, and attempts to load a
@@ -34,6 +71,25 @@ class SimpleModel(object):
         self.col = {}    
         if key is not None:
             self.__load_by_key__(key, *args, **kwargs)
+            
+        if handle is not None:
+            print "Simpycity __init__: Found handle."
+            self.handle = handle
+        else:
+            if l_config is not None:
+                self.config = l_config
+            else:
+                self.config = config
+            print "Simpycity __init__: Did not find handle - forging."
+            self.handle = psycopg2.connect(
+                    "host=%s port=%s dbname=%s user=%s password=%s" % (
+                        self.config.host,
+                        self.config.port,
+                        self.config.database,
+                        self.config.user,
+                        self.config.password
+                    )
+                )
     
     def __load_by_key__(self, key=None, *args,**kwargs):
         """
@@ -66,6 +122,10 @@ class SimpleModel(object):
         If they are an InstanceMethod, columns from the Model are mapped
         to the InstanceMethods' arguments, as appropriate.
         
+        It then tests if an attribute is a Function, Query, or Raw - the base
+        primitives of Simpycity. If it is, then handle= is added
+        to the argument list.
+        
         """
 
         attr = object.__getattribute__(self,name)
@@ -75,24 +135,33 @@ class SimpleModel(object):
         try:
             if 'InstanceMethod' in [x.__name__ for x in type(attr).mro()]:
                 def instance(*args,**kwargs):
+                    
                     if args:
                         raise FunctionError("This function can only take keyword arguments.")
                     my_args = {}
-                    for arg in kwargs:
-                        my_args[arg] = kwargs[arg]
+                    my_args = kwargs
                     for arg in attr.args:
-                        print "Simpycity InstanceMethod: checking arg %s" %arg
+                        print "Simpycity InstanceMethod: checking arg %s" % arg
                         print self.col
                         if arg in self.col:
                             print "Simpycity InstanceMethod: found %s in col.." %arg
                             my_args[arg] = self.col[arg]
                     return attr.function(**my_args)
                 return instance
+            
+            if "sql_function" in [x.__name__ for x in type(attr).mro()]:
+                def instance(*args,**kwargs):
+                    my_args = kwargs
+                    if 'options' not in kwargs:
+                        my_args['options'] = {}
+                        my_args['options']['handle'] = {}
+                    return attr.function(*args,**my_args)
+                return instance
             return attr
+            
         except TypeError:
             # not an Instance Method, just return
             return attr
+
     def set_col(self,col,val):
         self.col[col] = val
-
-
