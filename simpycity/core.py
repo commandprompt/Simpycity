@@ -18,6 +18,12 @@ from psycopg2 import extras
 import re
 
 import config
+from handle import Handle
+
+def d_out(text):
+    
+    if config.debug:
+        print text
 
 class meta_query(object):
     def __init__(self, *in_args, **kwargs):
@@ -35,31 +41,33 @@ class meta_query(object):
                 self.query = ''
         except AttributeError:
             self.query = ''
-        print "Simpycity Meta Query: %s" % self.query
+        d_out("Simpycity Meta Query: %s" % self.query)
         self.call_list = []
         self.args = in_args
         
         self.keyargs = kwargs
         
-        
         if 'options' in kwargs:
-            
+            d_out("Found a set of options..")
             opts = kwargs['options']
             del(self.keyargs['options'])
             try:
                 self.columns = opts['columns']
             except KeyError:
-                pass
+                self.columns=[]
             
             try:
-                self.handle = opts['handle']
-                print "Simpycity core.__init__: Found handle."
+                self.i_handle = opts['handle']
+                d_out("Simpycity core.__init__: Found handle.")
             except KeyError:
+                d_out("Couldn't set i_handle.")
+                self.i_handle = None
                 pass
                 
             try:
                 self.condense = opts['fold_output']
             except KeyError:
+                self.condense=None
                 pass
             
         else:
@@ -78,7 +86,7 @@ class meta_query(object):
             
         else:
             self.cols = "*"
-        print "Simpycity Meta Query Arg Count: %s" % self.arg_count
+        d_out("Simpycity Meta Query Arg Count: %s" % self.arg_count)
 
         if self.args >= 1:
             if len(self.args) < len(self.creation_args) \
@@ -129,33 +137,23 @@ class meta_query(object):
     def __execute__(self):
         self.form_query()
 
-        if self.handle is None:
-            print "Simpycity __execute__: Did not find handle, creating new.. "
-            conn = psycopg2.connect(
-                "host=%s port=%s dbname=%s user=%s password=%s" % (
-                    config.host,
-                    config.port,
-                    config.database,
-                    config.user,
-                    config.password
-                ),
-                
-            )
-        else:
-            print "Simpycity __execute__: Found handle, using."
-            conn = self.handle
+        if self.i_handle is None:
+            d_out("Simpycity __execute__: Did not find handle, creating new.. ")
+            self.i_handle = Handle(config)
+            d_out("Handle is %s" % self.i_handle)
             
-        cursor = conn.cursor(cursor_factory=extras.DictCursor)
-        print "Simpycity Query: %s" % (self.query)
-        print "Simpycity Call List: %s" % (self.call_list)
+        cursor = self.i_handle.cursor(cursor_factory=extras.DictCursor)
+        d_out("Cursor is %s" % cursor)
+        d_out("Simpycity Query: %s" % (self.query))
+        d_out("Simpycity Call List: %s" % (self.call_list))
 
         try:
             rs = cursor.execute(self.query, self.call_list)
         except psycopg2.InternalError, e:
             raise FunctionError(e)
             
-        self.rs = TypedResultSet(cursor,self.r_type)        
-        self.rs.conn = conn
+        self.rs = TypedResultSet(cursor,self.r_type)
+        self.rs.conn = self.i_handle
 
     def form_query(self):
         # This needs to be overridden
@@ -168,7 +166,7 @@ class meta_query(object):
         if self.rs is not None:
             self.rs.rollback()
 
-def Raw(sql, args=[], return_type=None):
+def Raw(sql, args=[], return_type=None, handle=None):
     # Just let us do raw SQL, kthx.
     
     class sql_function(meta_query):
@@ -176,16 +174,17 @@ def Raw(sql, args=[], return_type=None):
         creation_args = args
         r_type = return_type
         arg_count = len(args)
-        print "Raw Query Args Length: %s" % arg_count
+        i_handle = handle
+        d_out("Raw Query Args Length: %s" % arg_count)
         if arg_count == 1:
-            print "Found an argument: %s " % args[0]
+            d_out("Found an argument: %s " % args[0])
         def form_query(self):
             # self.cols is ignored - unnecessary.
             
             self.query = sql
     return sql_function
     
-def Query(name, where=[], return_type=None):
+def Query(name, where=[], return_type=None,handle=None):
     where_list = None
     if len(where) >= 1:
         where_list = [x+"=%s" for x in where]
@@ -197,7 +196,7 @@ def Query(name, where=[], return_type=None):
         arg_count = len(where)
         creation_args = where
         r_type = return_type
-        
+        i_handle = handle
         def form_query(self):
             
             self.query = "SELECT " + self.cols + " FROM " + self.name 
@@ -205,7 +204,7 @@ def Query(name, where=[], return_type=None):
                 self.query += " WHERE " + " AND ".join(self.w_list)
     return sql_function
 
-def Function(name, args=[], return_type=None):
+def Function(name, args=[], return_type=None, handle=None):
     if len(args) >= 1:
         replace = ['%s' for x in xrange(len(args))]
         query = "FROM %s(" % name + ",".join(replace) + ")"
@@ -218,7 +217,7 @@ def Function(name, args=[], return_type=None):
         r_type = return_type
         arg_count = len(args)
         creation_args = args
-        
+        i_handle = handle
         def form_query(self):
 
             self.query = "SELECT "+ self.cols + " " + self.func_query

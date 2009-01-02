@@ -1,42 +1,41 @@
 from simpycity.core import Function, FunctionError, ProceduralException
-from simpycity import config
+from simpycity.handle import Handle
+from simpycity import config as g_config
 import psycopg2
+
+def d_out(text):
+    
+    if g_config.debug:
+        print text
 
 class Construct(object):
     
-    def __init__(self, l_config=None, handle=None, *args,**kwargs):
+    def __init__(self, config=None, handle=None, *args,**kwargs):
         """
-        Sets up the objects' internal column.
-        Tests for the presence of a primary key, and attempts to load a
-        description using it.
+        A Construct is a basic datatype for Simpycity - basically providing
+        a framework that allows for all queries in the Construct to operate
+        under a single logical transaction.
         """
         self.col = {}    
         if key is not None:
             self.__load_by_key__(key, *args, **kwargs)
             
         if handle is not None:
-            print "Simpycity __init__: Found handle."
+            d_out("Simpycity __init__: Found handle.")
             self.handle = handle
         else:
-            if l_config is not None:
-                self.config = l_config
-            else:
+            if config is not None:
                 self.config = config
-            print "Simpycity __init__: Did not find handle - forging."
-            self.handle = psycopg2.connect(
-                    "host=%s port=%s dbname=%s user=%s password=%s" % (
-                        self.config.host,
-                        self.config.port,
-                        self.config.database,
-                        self.config.user,
-                        self.config.password
-                    )
-                )
+            else:
+                self.config = g_config
+            d_out("Simpycity __init__: Did not find handle - forging.")
+            self.handle = Handle(self.config)
     
     def commit(self):
         if self.handle is not None:
             self.handle.commit()
-        raise AttributeError("Cannot call commit without localized handle.")
+        else:
+            raise AttributeError("Cannot call commit without localized handle.")
 
 class InstanceMethod(object):
 
@@ -62,7 +61,7 @@ class SimpleModel(Construct):
     
     """
     
-    def __init__(self, key=None, l_config=None, handle=None, *args,**kwargs):
+    def __init__(self, key=None, config=None, handle=None, *args,**kwargs):
         """
         Sets up the objects' internal column.
         Tests for the presence of a primary key, and attempts to load a
@@ -73,23 +72,15 @@ class SimpleModel(Construct):
             self.__load_by_key__(key, *args, **kwargs)
             
         if handle is not None:
-            print "Simpycity __init__: Found handle."
+            d_out("SimpleModel __init__: Found handle.")
             self.handle = handle
         else:
-            if l_config is not None:
-                self.config = l_config
-            else:
+            if config is not None:
                 self.config = config
-            print "Simpycity __init__: Did not find handle - forging."
-            self.handle = psycopg2.connect(
-                    "host=%s port=%s dbname=%s user=%s password=%s" % (
-                        self.config.host,
-                        self.config.port,
-                        self.config.database,
-                        self.config.user,
-                        self.config.password
-                    )
-                )
+            else:
+                self.config = g_config
+            d_out("SimpleModel __init__: Did not find handle - forging.")
+            self.handle = Handle(self.config)
     
     def __load_by_key__(self, key=None, *args,**kwargs):
         """
@@ -103,12 +94,12 @@ class SimpleModel(Construct):
                 rs = self.__load__(key)
                 row = rs.next()
                 for item in self.table:
-                    print "Simpycity __load_by_key__: %s during load is %s" % (item, row[item])
+                    d_out("Simpycity __load_by_key__: %s during load is %s" % (item, row[item]))
                     self.col[item] = row[item]
                 print self.col
             except AttributeError, e:
                 #pass
-                print "Caught an AttributeError: %s" % e
+                d_out("Caught an AttributeError: %s" % e)
             except psycopg2.InternalError, e:
                 raise ProceduralException(e)
     
@@ -133,34 +124,39 @@ class SimpleModel(Construct):
         # __class__) will throw a TypeError if you try to use type(attr).mro().
         
         try:
+            if "sql_function" in [x.__name__ for x in type(attr).mro(attr)]:
+                d_out("SimpleModel __getattribute__: Found sql_function..")
+                def instance(*args,**kwargs):
+                    my_args = kwargs
+                    
+                    if 'options' not in kwargs:
+                        d_out("SimpleModel __getattribute__: Didn't find options. Setting..")
+                        my_args['options'] = {}
+                        my_args['options']['handle'] = self.handle
+                    return attr(*args,**my_args)
+                return instance
+            
             if 'InstanceMethod' in [x.__name__ for x in type(attr).mro()]:
                 def instance(*args,**kwargs):
-                    
+
                     if args:
                         raise FunctionError("This function can only take keyword arguments.")
                     my_args = {}
                     my_args = kwargs
                     for arg in attr.args:
-                        print "Simpycity InstanceMethod: checking arg %s" % arg
-                        print self.col
+                        d_out("Simpycity InstanceMethod: checking arg %s" % arg)
+                        d_out(self.col)
                         if arg in self.col:
-                            print "Simpycity InstanceMethod: found %s in col.." %arg
+                            d_out("Simpycity InstanceMethod: found %s in col.." %arg)
                             my_args[arg] = self.col[arg]
                     return attr.function(**my_args)
                 return instance
             
-            if "sql_function" in [x.__name__ for x in type(attr).mro()]:
-                def instance(*args,**kwargs):
-                    my_args = kwargs
-                    if 'options' not in kwargs:
-                        my_args['options'] = {}
-                        my_args['options']['handle'] = {}
-                    return attr.function(*args,**my_args)
-                return instance
             return attr
             
         except TypeError:
             # not an Instance Method, just return
+            d_out("SimpleModel __getattribute__ :Got a TypeError getting %s" % name)
             return attr
 
     def set_col(self,col,val):
