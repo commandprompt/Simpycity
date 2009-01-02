@@ -35,3 +35,10 @@ class Handle(object):
         
     def __repr__(self):
         return "Handle object"
+    
+    def close(self,*args,**kwargs):
+        self.conn.close()
+    
+    def rollback(self):
+        
+        self.conn.rollback()

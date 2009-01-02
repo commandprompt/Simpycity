@@ -268,7 +268,7 @@ class TypedResultSet(SimpleResultSet):
     
         if self.type is None:
             return item
-        i = self.type()
+        i = self.type(handle=self.conn)
         for col in item.keys():
             i.set_col(col,item[col])
         return i

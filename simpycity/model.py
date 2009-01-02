@@ -36,17 +36,22 @@ class Construct(object):
             self.handle.commit()
         else:
             raise AttributeError("Cannot call commit without localized handle.")
+    def close(self):
+        self.handle.close()
+        
+    def rollback(self):
+        self.handle.rollback()
 
 class InstanceMethod(object):
 
     """InstanceMethods are a requirement for the SimpleModel object. 
     Instancemethods are used to map internal arguments for a 
     """
-    def __init__(self, func, args=[], return_type=None):
+    def __init__(self, func, args=[], return_type=None, *posargs, **kwargs):
         self.name = func
         self.args = args
         self.return_type = return_type
-        self.function = Function(self.name,args,return_type)
+        self.function = Function(self.name,args,return_type,*posargs,**kwargs)
 
 
 class SimpleModel(Construct):
@@ -67,9 +72,7 @@ class SimpleModel(Construct):
         Tests for the presence of a primary key, and attempts to load a
         description using it.
         """
-        self.col = {}    
-        if key is not None:
-            self.__load_by_key__(key, *args, **kwargs)
+        self.col = {}
             
         if handle is not None:
             d_out("SimpleModel __init__: Found handle.")
@@ -81,6 +84,9 @@ class SimpleModel(Construct):
                 self.config = g_config
             d_out("SimpleModel __init__: Did not find handle - forging.")
             self.handle = Handle(self.config)
+        
+        if key is not None:
+            self.__load_by_key__(key, *args, **kwargs)
     
     def __load_by_key__(self, key=None, *args,**kwargs):
         """
@@ -91,7 +97,7 @@ class SimpleModel(Construct):
         # check for an __get function
         if key is not None:
             try:
-                rs = self.__load__(key)
+                rs = self.__load__(key,options=dict(handle=self.handle))
                 row = rs.next()
                 for item in self.table:
                     d_out("Simpycity __load_by_key__: %s during load is %s" % (item, row[item]))
@@ -99,7 +105,8 @@ class SimpleModel(Construct):
                 print self.col
             except AttributeError, e:
                 #pass
-                d_out("Caught an AttributeError: %s" % e)
+                d_out("Simpycity __load_by_key: Caught an AttributeError: %s" % e)
+                raise 
             except psycopg2.InternalError, e:
                 raise ProceduralException(e)
     
@@ -123,40 +130,49 @@ class SimpleModel(Construct):
         # This uses a try/catch because non-instance attributes (like 
         # __class__) will throw a TypeError if you try to use type(attr).mro().
         
+        mro = None
         try:
-            if "sql_function" in [x.__name__ for x in type(attr).mro(attr)]:
-                d_out("SimpleModel __getattribute__: Found sql_function..")
-                def instance(*args,**kwargs):
-                    my_args = kwargs
-                    
-                    if 'options' not in kwargs:
-                        d_out("SimpleModel __getattribute__: Didn't find options. Setting..")
-                        my_args['options'] = {}
-                        my_args['options']['handle'] = self.handle
-                    return attr(*args,**my_args)
-                return instance
-            
-            if 'InstanceMethod' in [x.__name__ for x in type(attr).mro()]:
-                def instance(*args,**kwargs):
-
-                    if args:
-                        raise FunctionError("This function can only take keyword arguments.")
-                    my_args = {}
-                    my_args = kwargs
-                    for arg in attr.args:
-                        d_out("Simpycity InstanceMethod: checking arg %s" % arg)
-                        d_out(self.col)
-                        if arg in self.col:
-                            d_out("Simpycity InstanceMethod: found %s in col.." %arg)
-                            my_args[arg] = self.col[arg]
-                    return attr.function(**my_args)
-                return instance
-            
-            return attr
-            
+            mro = [x.__name__ for x in type(attr).mro()]
+            d_out("SimpleModel __getattribute__: Found a conventional attribute")
         except TypeError:
-            # not an Instance Method, just return
-            d_out("SimpleModel __getattribute__ :Got a TypeError getting %s" % name)
+            d_out("SimpleModel __getattribute__: Found an uninstanced attribute")
+            mro = [x.__name__ for x in type(attr).mro(attr)]
+            
+        
+        if "sql_function" in mro:
+                
+            d_out("SimpleModel __getattribute__: Found sql_function %s" % name)
+            def instance(*args,**kwargs):
+                my_args = kwargs
+                
+                if 'options' not in kwargs:
+                    d_out("SimpleModel __getattribute__: Didn't find options. Setting..")
+                    my_args['options'] = {}
+                    my_args['options']['handle'] = self.handle
+                return attr(*args,**my_args)
+            return instance
+            
+        elif 'InstanceMethod' in mro:
+            d_out("SimpleModel __getattribute__: Found an InstanceMethod %s " % name)
+            def instance(*args,**kwargs):
+                if args:
+                    raise FunctionError("This function can only take keyword arguments.")
+                my_args = {}
+                my_args = kwargs
+                for arg in attr.args:
+                    d_out("Simpycity __getattribute__ InstanceMethod: checking arg %s" % arg)
+                    d_out(self.col)
+                    if arg in self.col:
+                        d_out("Simpycity __getattribute__ InstanceMethod: found %s in col.." %arg)
+                        my_args[arg] = self.col[arg]
+                if 'options' not in kwargs:
+                    d_out("SimpleModel __getattribute__: Didn't find options. Setting..")
+                    my_args['options'] = {}
+                    my_args['options']['handle'] = self.handle
+                return attr.function(**my_args)
+            return instance
+            
+        else:
             return attr
 
     def set_col(self,col,val):
