@@ -24,18 +24,66 @@ def d_out(text):
     
     if config.debug:
         print text
+        
 
 class meta_query(object):
-    def __init__(self, *in_args, **kwargs):
+    
+    """Base object for Simpycity.
+       
+       Functions:
+         * __init__(self, name, args=[],return_type=None, handle=None):
+           Initializes the Simpycity object, as expected. Most classes need
+           to override and super() this function, to add additional logic 
+           parsing to the query generator.
+           
+         * __call__(self, *in_args,**in_args):
+           Heavy lifting. Takes the provided arguments (positional and keyword)
+           and correctly maps them to your query. Returns a ResultSet object
+           of your choice, optionally.
+         
+         * form_query(self, columns):
+           Stub function, needs to be implemented by subclasses. Does what 
+           little logic is necessary for the generation of a query.
+           
+         * set_handle(self, handle):
+           Sets the handle used by the query object.
+           
+         * commit(self):
+           Forcibly commits the handle
+           
+         * rollback(self):
+           Forcibly rolls back the handle.
+    """
+    
+    def __init__(self, name, args=[], return_type=None, handle=None):
+        
+        """Base initialization"""
+        
+        self.query_base = name
+        self.args = args
+        self.return_type = return_type
+        self.handle = handle
+    
+    def __call__(self, *in_args, **in_kwargs):
         
         """
-        Initializor for a meta_query/sql_function-style object.
-        handle is a psycopg-or-equivalent database handle that has been handed
-        to Simpycity.
-        fold_output is 
+        Call function for a meta_query/sql_function-style object.
+        
+        Calling the function in this method causes the core SQL to be run and 
+        a ResultSet returned. 
+        
+        It accepts an options={} argument, which responds to the following 
+        keys:
+        * columns: Alters what columns are selected by the query.
+        * handle: Overrides the stored handle with a customized version.
+        * fold_output: For single-row result sets, this will return only that
+            row as a tuple, instead of a tuple of tuples comprising the entire
+            set.
+            For a single-column, single-row result set, it will return only
+            that value, instead of a tuple of tuple. ** NOT YET IMPLEMENTED **
+        
         """
         
-        self.rs = None
         try:
             if not self.query:
                 self.query = ''
@@ -43,62 +91,60 @@ class meta_query(object):
             self.query = ''
         d_out("Simpycity Meta Query: %s" % self.query)
         self.call_list = []
-        self.args = in_args
+#        self.args = in_args
         
-        self.keyargs = kwargs
+        keyargs = kwargs
         
         if 'options' in kwargs:
-            d_out("Found a set of options..")
+            d_out("meta_query.__call__: Found a set of options..")
             opts = kwargs['options']
-            del(self.keyargs['options'])
+            del(keyargs['options'])
             try:
-                self.columns = opts['columns']
+                columns = opts['columns']
             except KeyError:
-                self.columns=[]
+                columns=[]
             
             try:
-                self.i_handle = opts['handle']
-                d_out("Simpycity core.__init__: Found handle.")
+                handle = opts['handle']
+                d_out("meta_query.__call__: Found handle.")
             except KeyError:
-                d_out("Couldn't set i_handle.")
-                self.i_handle = None
-                pass
+                d_out("meta_query.__call__: Couldn't set handle.")
+                handle = None
                 
             try:
-                self.condense = opts['fold_output']
+                condense = opts['fold_output']
             except KeyError:
-                self.condense=None
-                pass
+                condense=None
             
         else:
-            self.columns = [] # an empty set.
-            self.handle = None
-            self.condense=None
+            columns = [] # an empty set.
+            handle = None
+            condense=None
         
-        if len(self.columns) >= 1:
+        if len(columns) >= 1:
             # we are limiting the return type.
             # Eventually, we'll check it against the return object.
             # Until then, we just assume the user knows what they're 
             # doing.
-            self.cols = ",".join([x for x in self.columns])
-            print self.cols
+            cols = ",".join([x for x in self.columns])
+            d_out("meta_query.__call__: Called with column limiters: %s" %cols)
             
             
         else:
-            self.cols = "*"
-        d_out("Simpycity Meta Query Arg Count: %s" % self.arg_count)
+            cols = "*"
+        d_out("meta_query.__call__: Arg Count: %s" % self.arg_count)
 
-        if self.args >= 1:
-            if len(self.args) < len(self.creation_args) \
-                and len(self.keyargs) < len(self.creation_args) \
-                and len(self.keyargs) + len(self.args) < len(self.creation_args):
+        if args >= 1:
+            if len(args) < len(self.args) \
+                and len(keyargs) < len(self.args) \
+                and len(keyargs) + len(args) < len(self.args):
                     raise Exception("Insufficient arguments.")
                 
-            if len(self.args) > len(self.creation_args) \
-                or len(self.keyargs) > len(self.creation_args) \
-                or len(self.keyargs) + len(self.args) > len(self.creation_args):
+            if len(args) > len(self.args) \
+                or len(keyargs) > len(self.args) \
+                or len(keyargs) + len(args) > len(self.args):
                     raise Exception("Too many arguments.")
-            self.call_list = ['' for x in xrange(len(self.creation_args))]
+            call_list = ['' for x in xrange(len(self.args))]
             if kwargs:
                 # we have to do some magic.
                 try:
@@ -109,120 +155,111 @@ class meta_query(object):
             for index,arg in enumerate(self.args):
                 self.call_list[index] = arg
         
-        self.__execute__()
+        self.__execute__(cols, call_list, handle, condense)
+        
+    
+    def form_query(self, columns):
+        """Subclass function to create the query based on the columns 
+        provided at instance time."""
+        pass
         
     def __repr__(self):
-        self.form_query()
-        if self.query:
-            return self.query % self.call_list
+        query = self.form_query("*")
+        return query
             
-    def __iter__(self):
-        if self.rs is not None:
-            return self.rs.__iter__()
-        else:
-            raise StopIteration()
-            
-    def __len__(self):
-        if self.rs is not None:
-            return self.rs.__len__()
-        else:
-            return 0
+    def handle(self, handle):
         
-    def next(self):
-        if self.rs is not None:
-            return self.rs.fetchone()
-        else:
-            return None
+        """
+        Permanently resets the handle.
+        """
+        
+        self.attr['handle'] = handle
             
-    def __execute__(self):
-        self.form_query()
-
-        if self.i_handle is None:
-            d_out("Simpycity __execute__: Did not find handle, creating new.. ")
-            self.i_handle = Handle(config)
-            d_out("Handle is %s" % self.i_handle)
+    def __execute__(self, columns, call_list, handle=None, condense=False):
+        
+        '''
+        Runs the stored query based on the arguments provided to
+        __call__.
+         '''
+        query = self.form_query(cols)
+        
+        
+        if handle is None:
+            if self..attr['handle'] is None:
+                d_out("meta_query.__execute__: Did not find handle, creating new.. ")
+                self.attr['handle'] = Handle(config, autocommit=True)
+                d_out("meta_query.__execute__: Handle is %s" % self.attr['handle'])
             
-        cursor = self.i_handle.cursor(cursor_factory=extras.DictCursor)
-        d_out("Cursor is %s" % cursor)
-        d_out("Simpycity Query: %s" % (self.query))
-        d_out("Simpycity Call List: %s" % (self.call_list))
+        cursor = self.attr['handle'].cursor(cursor_factory=extras.DictCursor)
+        d_out("meta_query.__execute__: Cursor is %s" % cursor)
+        d_out("meta_query.__execute__: Query: %s" % ( self.query ) )
+        d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
 
         try:
-            rs = cursor.execute(self.query, self.call_list)
+            rs = cursor.execute(self.query, call_list)
         except psycopg2.InternalError, e:
             raise FunctionError(e)
             
-        self.rs = TypedResultSet(cursor,self.r_type)
-        self.rs.conn = self.i_handle
+        rs = TypedResultSet(cursor,self.r_type)
+        rs.statement = self.query
+        rs.call_list = call_list
+        rs.conn = self.handle
+        return rs
 
     def form_query(self):
         # This needs to be overridden
         pass 
         
     def commit(self):
-        if self.rs is not None:
-            self.rs.commit()
-    def rollback(self):
-        if self.rs is not None:
-            self.rs.rollback()
-
-def Raw(sql, args=[], return_type=None, handle=None):
-    # Just let us do raw SQL, kthx.
-    
-    class sql_function(meta_query):
-        query = sql
-        creation_args = args
-        r_type = return_type
-        arg_count = len(args)
-        i_handle = handle
-        d_out("Raw Query Args Length: %s" % arg_count)
-        if arg_count == 1:
-            d_out("Found an argument: %s " % args[0])
-        def form_query(self):
-            # self.cols is ignored - unnecessary.
-            
-            self.query = sql
-    return sql_function
-    
-def Query(name, where=[], return_type=None,handle=None):
-    where_list = None
-    if len(where) >= 1:
-        where_list = [x+"=%s" for x in where]
-    
-    class sql_function(meta_query):
-        name = table_name
-        r_type = return_type
-        w_list = where_list
-        arg_count = len(where)
-        creation_args = where
-        r_type = return_type
-        i_handle = handle
-        def form_query(self):
-            
-            self.query = "SELECT " + self.cols + " FROM " + self.name 
-            if self.w_list:
-                self.query += " WHERE " + " AND ".join(self.w_list)
-    return sql_function
-
-def Function(name, args=[], return_type=None, handle=None):
-    if len(args) >= 1:
-        replace = ['%s' for x in xrange(len(args))]
-        query = "FROM %s(" % name + ",".join(replace) + ")"
-    else:
-        query = "FROM %s()" % name
         
-    class sql_function(meta_query):
-        function_name = name
-        func_query = query
-        r_type = return_type
-        arg_count = len(args)
-        creation_args = args
-        i_handle = handle
-        def form_query(self):
+        """Commits the query, using the internal self.handle."""
+        
+        if self.handle is not None:
+            self.handle.commit()
+        else:
+            raise Exception("Could not commit, no handle found.")
+            
+    def rollback(self):
+        
+        """Rolls back the query, using the internal self.handle."""
+        
+        if self.handle is not None:
+            self.handle.rollback()
+        else:
+            raise Exception("Could not rollback, no handle found.")
+            
+            
+class Function(meta_query):
 
-            self.query = "SELECT "+ self.cols + " " + self.func_query
+    def form_query(self, columns):
+        
+        if len(self.args) >= 1:
+            replace = ['%s' for x in xrange(len(self.args))]
+            func = "FROM %s(" % self.query_base + ",".join(replace) + ")"
+        else:
+            func = "FROM %s()" % self.query_base
 
-    return sql_function
+        return "SELECT " + columns + " " + func
+        
+        
+class Raw(meta_query):
+    
+    def form_query(self, columns):
+        
+        return self.query_base
+        
+class Query(meta_query):
+    
+    def form_query(self, columns):
+        
+        if len(self.args) >= 1:
+            where_list = [x+"=%s" for x in self.args]
+        
+        query = "SELECT " + columns + " FROM " + self.query_base
+        if where_list
+            query += " WHERE " + " AND ".join(where_list)
+            
+        return query
     
 class SimpleResultSet(object):
     

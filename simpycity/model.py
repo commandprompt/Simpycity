@@ -1,4 +1,4 @@
-from simpycity.core import Function, FunctionError, ProceduralException
+from simpycity.core import Function, FunctionError, ProceduralException, Raw, Query
 from simpycity.handle import Handle
 from simpycity import config as g_config
 import psycopg2
@@ -21,14 +21,14 @@ class Construct(object):
             self.__load_by_key__(key, *args, **kwargs)
             
         if handle is not None:
-            d_out("Simpycity __init__: Found handle.")
+            d_out("Construct.__init__: Found handle.")
             self.handle = handle
         else:
             if config is not None:
                 self.config = config
             else:
                 self.config = g_config
-            d_out("Simpycity __init__: Did not find handle - forging.")
+            d_out("Construct.__init__: Did not find handle - forging.")
             self.handle = Handle(self.config)
     
     def commit(self):
@@ -40,19 +40,52 @@ class Construct(object):
         self.handle.close()
         
     def rollback(self):
-        self.handle.rollback()
+        if self.handle is not None:
+            self.handle.rollback()
+        else:
+            raise AttributeError("Cannot call rollback without localized handle.")
+        
+        
+    def __getattribute__(self,name):
 
-class InstanceMethod(object):
+        """
+        Private method.
 
-    """InstanceMethods are a requirement for the SimpleModel object. 
-    Instancemethods are used to map internal arguments for a 
-    """
-    def __init__(self, func, args=[], return_type=None, *posargs, **kwargs):
-        self.name = func
-        self.args = args
-        self.return_type = return_type
-        self.function = Function(self.name,args,return_type,*posargs,**kwargs)
+        This function tests all attributes of the Construct if they are 
+        Simpycity base objects.
+        If they are a Simpycity object, the handle is forcibly overriden
+        with the Constructs' handle, creating a logically grouped transaction
+        state.
 
+        """
+
+        attr = object.__getattribute__(self,name)
+        # This uses a try/catch because non-instance attributes (like 
+        # __class__) will throw a TypeError if you try to use type(attr).mro().
+
+        mro = None
+        try:
+            mro = [x.__name__ for x in type(attr).mro()]
+            d_out("SimpleModel __getattribute__: Found a conventional attribute")
+        except TypeError:
+            d_out("SimpleModel __getattribute__: Found an uninstanced attribute")
+            mro = [x.__name__ for x in type(attr).mro(attr)]
+
+
+        if "meta_query" in mro:
+
+            d_out("Construct __getattribute__: Found meta_query %s" % name)
+            def instance(*args,**kwargs):
+
+                if 'options' not in kwargs:
+                    d_out("Construct __getattribute__: Didn't find options. Setting handle.")
+                    my_args['options'] = {}
+                    my_args['options']['handle'] = self.handle
+                return attr.function(**my_args)
+            return instance
+
+        else:
+            return attr
 
 class SimpleModel(Construct):
     
@@ -116,14 +149,13 @@ class SimpleModel(Construct):
         Private method.
         
         This function tests all attributes of the SimpleModel if they are 
-        InstanceMethods.
-        If they are an InstanceMethod, columns from the Model are mapped
+        Simpycity base objects.
+        If they are a Simpycity object, columns from the Model are mapped
         to the InstanceMethods' arguments, as appropriate.
         
-        It then tests if an attribute is a Function, Query, or Raw - the base
-        primitives of Simpycity. If it is, then handle= is added
-        to the argument list.
-        
+        Similar to Construct, a SimpleModel will also enforce all Simpycity
+        objects to use its Handle state, creating a singular transactional
+        entity.
         """
 
         attr = object.__getattribute__(self,name)
@@ -139,34 +171,23 @@ class SimpleModel(Construct):
             mro = [x.__name__ for x in type(attr).mro(attr)]
             
         
-        if "sql_function" in mro:
+        if "meta_query" in mro:
                 
-            d_out("SimpleModel __getattribute__: Found sql_function %s" % name)
+            d_out("SimpleModel __getattribute__: Found meta_query %s" % name)
             def instance(*args,**kwargs):
-                my_args = kwargs
                 
-                if 'options' not in kwargs:
-                    d_out("SimpleModel __getattribute__: Didn't find options. Setting..")
-                    my_args['options'] = {}
-                    my_args['options']['handle'] = self.handle
-                return attr(*args,**my_args)
-            return instance
-            
-        elif 'InstanceMethod' in mro:
-            d_out("SimpleModel __getattribute__: Found an InstanceMethod %s " % name)
-            def instance(*args,**kwargs):
                 if args:
                     raise FunctionError("This function can only take keyword arguments.")
-                my_args = {}
                 my_args = kwargs
                 for arg in attr.args:
                     d_out("Simpycity __getattribute__ InstanceMethod: checking arg %s" % arg)
-                    d_out(self.col)
+                    d_out("Simpycity __getattribute__: %s" % self.col)
                     if arg in self.col:
                         d_out("Simpycity __getattribute__ InstanceMethod: found %s in col.." %arg)
                         my_args[arg] = self.col[arg]
+                        
                 if 'options' not in kwargs:
-                    d_out("SimpleModel __getattribute__: Didn't find options. Setting..")
+                    d_out("SimpleModel __getattribute__: Didn't find options. Setting handle.")
                     my_args['options'] = {}
                     my_args['options']['handle'] = self.handle
                 return attr.function(**my_args)
