@@ -81,7 +81,7 @@ class Construct(object):
                     d_out("Construct __getattribute__: Didn't find options. Setting handle.")
                     my_args['options'] = {}
                     my_args['options']['handle'] = self.handle
-                return attr.function(**my_args)
+                return attr(**my_args)
             return instance
 
         else:
@@ -165,32 +165,34 @@ class SimpleModel(Construct):
         mro = None
         try:
             mro = [x.__name__ for x in type(attr).mro()]
-            d_out("SimpleModel __getattribute__: Found a conventional attribute")
+            d_out("SimpleModel.__getattribute__: Found a conventional attribute")
         except TypeError:
-            d_out("SimpleModel __getattribute__: Found an uninstanced attribute")
+            d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
             
         
         if "meta_query" in mro:
                 
-            d_out("SimpleModel __getattribute__: Found meta_query %s" % name)
+            d_out("SimpleModel.__getattribute__: Found meta_query %s" % name)
             def instance(*args,**kwargs):
                 
                 if args:
                     raise FunctionError("This function can only take keyword arguments.")
                 my_args = kwargs
                 for arg in attr.args:
-                    d_out("Simpycity __getattribute__ InstanceMethod: checking arg %s" % arg)
-                    d_out("Simpycity __getattribute__: %s" % self.col)
+                    d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
+                    d_out("SimpleModel.__getattribute__: %s" % self.col)
                     if arg in self.col:
-                        d_out("Simpycity __getattribute__ InstanceMethod: found %s in col.." %arg)
+                        d_out("SimpleModel.__getattribute__ InstanceMethod: found %s in col.." %arg)
                         my_args[arg] = self.col[arg]
                         
                 if 'options' not in kwargs:
-                    d_out("SimpleModel __getattribute__: Didn't find options. Setting handle.")
+                    d_out("SimpleModel.__getattribute__: Didn't find options. Setting handle.")
                     my_args['options'] = {}
                     my_args['options']['handle'] = self.handle
-                return attr.function(**my_args)
+                rs = attr(**my_args)
+                d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
+                return rs
             return instance
             
         else:

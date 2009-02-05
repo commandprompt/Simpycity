@@ -19,10 +19,10 @@ class dbTest(unittest.TestCase):
                 config.host
             )
         )
-        h = open("test/db_test.sql","r")
+        h = open("sql/db_test.sql","r")
         self.create_sql = h.read()
         h.close()
-        h = open("test/db_test_unload.sql","r")
+        h = open("sql/db_test_unload.sql","r")
         self.destroy_sql = h.read()
         self.conn.execute(self.create_sql)
         
@@ -41,14 +41,14 @@ class ModelTest(dbTest):
         q = SimpleReturn()
         self.failUnless(
             'SimpleModel' in [x.__name__ for x in type(q).mro()],
-            "Model object successfully created."
+            "Model object not successfully created."
         )
         
     def testInstanceMethods(self):
         q = SimpleInstanceModel()
         self.failUnless(
             'SimpleModel' in [x.__name__ for x in type(q).mro()],
-            "Model object successfully created."
+            "Model object not successfully created."
         )
         
     
@@ -86,7 +86,7 @@ class FunctionTest(dbTest):
         
         f = Function("test")
         self.failUnless(
-            'sql_function' in [x.__name__ for x in type(f).mro(f)],
+            'meta_query' in [x.__name__ for x in type(f).mro()],
             "Is an sql_function object."
         )
         
@@ -98,7 +98,7 @@ class FunctionTest(dbTest):
         
     def testPartialReturnSet(self):
         f = Function("test")
-        rs = r(returns=['id'])
+        rs = r(options=dict(columns=['id']))
         self.assertEqual(len(rs),3,"Partial Result Set has 3 entries.")
         
         for row in rs:
@@ -109,7 +109,7 @@ class FunctionTest(dbTest):
             )
     def testPartialWithArguments(self):
         f = Function("test",['id'])
-        rs = r(1,returns=['id'])
+        rs = r(1,dict(columns=['id']))
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
         
         for row in rs:
@@ -121,7 +121,7 @@ class FunctionTest(dbTest):
     
     def testOutsideRange(self):
         f = Function("test",['id'])
-        rs = (4)
+        rs = f(4)
         self.assertEqual(len(rs),0,"Request outside range returns 0 rows.")
     
 class QueryTest(dbTest):
@@ -130,7 +130,7 @@ class QueryTest(dbTest):
         
         q = Query("test")
         self.failUnless(
-            'sql_function' in [x.__name__ for x in type(q).mro(q)],
+            'meta_query' in [x.__name__ for x in type(q).mro()],
             "Return from query creation is of type sql_function."
         )
         rs = q()
@@ -165,7 +165,7 @@ class QueryTest(dbTest):
             )
     def testPartialWithArguments(self):
         f = Function("test",['id'])
-        rs = r(1,returns=['id'])
+        rs = r(1,dict(columns=['id']))
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
 
         for row in rs:
@@ -178,7 +178,8 @@ class QueryTest(dbTest):
 class RawTest(dbTest):
     
     def testRunQuery(self):
-        rs = Raw("select * from test where id = ?",[1])
+        r = Raw("select * from test where id = %s",[1])
+        
         self.assertEqual(len(rs), 1, "ResultSet has single entry.")
         
         row = rs.next()
@@ -199,7 +200,7 @@ class SimpleLoaderModel(SimpleInstanceModel):
     
 class SimpleUpdateModel(SimpleLoaderModel):
     
-    update = InstanceMethod("update_row",['id','new_value'])
+    update = Function("update_row",['id','new_value'])
     
        
 if __name__ == '__main__':

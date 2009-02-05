@@ -62,7 +62,8 @@ class meta_query(object):
         self.query_base = name
         self.args = args
         self.return_type = return_type
-        self.handle = handle
+        self.attr = {}
+        self.attr['handle'] = handle
     
     def __call__(self, *in_args, **in_kwargs):
         
@@ -93,11 +94,11 @@ class meta_query(object):
         self.call_list = []
 #        self.args = in_args
         
-        keyargs = kwargs
+        keyargs = in_kwargs
         
-        if 'options' in kwargs:
+        if 'options' in in_kwargs:
             d_out("meta_query.__call__: Found a set of options..")
-            opts = kwargs['options']
+            opts = in_kwargs['options']
             del(keyargs['options'])
             try:
                 columns = opts['columns']
@@ -126,36 +127,38 @@ class meta_query(object):
             # Eventually, we'll check it against the return object.
             # Until then, we just assume the user knows what they're 
             # doing.
-            cols = ",".join([x for x in self.columns])
+            cols = ",".join([x for x in columns])
             d_out("meta_query.__call__: Called with column limiters: %s" %cols)
             
             
         else:
             cols = "*"
-        d_out("meta_query.__call__: Arg Count: %s" % self.arg_count)
+            
+        d_out("meta_query.__call__: Requires args: %s" % len(self.args))
+        d_out("meta_query.__call__: Got args: %i" % (len(keyargs) + len(in_args)))
 
-        if args >= 1:
-            if len(args) < len(self.args) \
+        if in_args >= 1:
+            if len(in_args) < len(self.args) \
                 and len(keyargs) < len(self.args) \
-                and len(keyargs) + len(args) < len(self.args):
+                and len(keyargs) + len(in_args) < len(self.args):
                     raise Exception("Insufficient arguments.")
                 
-            if len(args) > len(self.args) \
+            if len(in_args) > len(self.args) \
                 or len(keyargs) > len(self.args) \
-                or len(keyargs) + len(args) > len(self.args):
+                or len(keyargs) + len(in_args) > len(self.args):
                     raise Exception("Too many arguments.")
             call_list = ['' for x in xrange(len(self.args))]
-            if kwargs:
+            if in_kwargs:
                 # we have to do some magic.
                 try:
-                    for arg in self.keyargs.iterkeys():
-                        self.call_list[ self.creation_args.index(arg) ] = self.keyargs[arg]
+                    for arg in keyargs.iterkeys():
+                        call_list[ self.args.index(arg) ] = keyargs[arg]
                 except ValueError:
                     raise Exception("Spurious keyword argument passed.")
-            for index,arg in enumerate(self.args):
-                self.call_list[index] = arg
-        
-        self.__execute__(cols, call_list, handle, condense)
+            for index,arg in enumerate(in_args):
+                call_list[index] = arg
+        d_out("meta_query __call__: Handle is %s" % handle)
+        return self.__execute__(cols, call_list, handle, condense)
         
     
     def form_query(self, columns):
@@ -181,29 +184,35 @@ class meta_query(object):
         Runs the stored query based on the arguments provided to
         __call__.
          '''
-        query = self.form_query(cols)
+        query = self.form_query(columns)
         
+        d_out("meta_query __execute__: Handle is %s" % handle)
         
         if handle is None:
-            if self..attr['handle'] is None:
+            if self.attr['handle'] is None:
                 d_out("meta_query.__execute__: Did not find handle, creating new.. ")
-                self.attr['handle'] = Handle(config, autocommit=True)
+                handle = Handle(config, autocommit=True)
                 d_out("meta_query.__execute__: Handle is %s" % self.attr['handle'])
-            
-        cursor = self.attr['handle'].cursor(cursor_factory=extras.DictCursor)
+            else:
+                d_out("meta_query.__execute__: Found object handle.. ")
+                handle = self.attr['handle']
+                
+        
+        cursor = handle.cursor(cursor_factory=extras.DictCursor)
         d_out("meta_query.__execute__: Cursor is %s" % cursor)
-        d_out("meta_query.__execute__: Query: %s" % ( self.query ) )
+        d_out("meta_query.__execute__: Query: %s" % ( query ) )
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
 
         try:
-            rs = cursor.execute(self.query, call_list)
+            rs = cursor.execute(query, call_list)
         except psycopg2.InternalError, e:
             raise FunctionError(e)
             
-        rs = TypedResultSet(cursor,self.r_type)
-        rs.statement = self.query
+        rs = TypedResultSet(cursor,self.return_type)
+        rs.statement = query
         rs.call_list = call_list
-        rs.conn = self.handle
+        rs.conn = handle
+        d_out("meta_query.__execute__: Returning rs of %s"%rs)
         return rs
 
     def form_query(self):
@@ -256,7 +265,7 @@ class Query(meta_query):
             where_list = [x+"=%s" for x in self.args]
         
         query = "SELECT " + columns + " FROM " + self.query_base
-        if where_list
+        if where_list:
             query += " WHERE " + " AND ".join(where_list)
             
         return query
