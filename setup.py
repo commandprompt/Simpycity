@@ -11,7 +11,7 @@ setup(
     description='A simple functionally-oriented PostgreSQL DB access pattern.',
     author='Aurynn Shaw, Commandprompt, Inc.',
     author_email='ashaw@commandprompt.com',
-    url='https://projects.commandprompt.com/public/simpycity',
+    url='https://projects.commandprompt.com/public/simpycity/repo/dist',
     install_requires=[
         "psycopg2>=2.0.8",
     ],

@@ -8,12 +8,16 @@ def d_out(text):
 
 class Handle(object):
     
-    def __init__(self,config=None):
+    def __init__(self,config=None,isolation_level=None):
         
         if config is not None:
             self.config = config
         else:
             self.config = g_config
+            
+        self.isolation_level = None
+        if isolation_level is not None and isolation_level in [0,1,2]:
+            self.isolation_level = isolation_level
         
         d_out("Creating DB connection")
         self.conn = psycopg2.connect(
@@ -25,10 +29,13 @@ class Handle(object):
                 self.config.password
             ),
         )
+        if self.isolation_level is not None:
+            self.conn.set_isolation_level(isolation_level)
         
     def cursor(self,*args,**kwargs):
         d_out("Creating cursor..")
-        return self.conn.cursor(*args,**kwargs)
+        cur = self.conn.cursor(*args,**kwargs)
+        return cur
     def commit(self):
         d_out("Committing transactions.")
         return self.conn.commit()
