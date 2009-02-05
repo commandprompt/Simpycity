@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: Simpycity
-Version: 0.1.4a5
+Version: 0.2.0a1dev
 Summary: A simple functionally-oriented PostgreSQL DB access pattern.
 Home-page: https://projects.commandprompt.com/public/simpycity
 Author: Aurynn Shaw, Commandprompt, Inc.

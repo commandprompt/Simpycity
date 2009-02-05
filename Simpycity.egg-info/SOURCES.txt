@@ -1,4 +1,5 @@
 LICENSE
+setup.cfg
 setup.py
 Simpycity.egg-info/PKG-INFO
 Simpycity.egg-info/SOURCES.txt
@@ -15,5 +16,8 @@ simpycity/config.py
 simpycity/core.py
 simpycity/handle.py
 simpycity/model.py
+test/__init__.py
 test/base.py
 test/handle.py
+test/sql/test.sql
+test/sql/test_unload.sql
