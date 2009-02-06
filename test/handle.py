@@ -1,6 +1,6 @@
 import unittest
 from simpycity.core import Function, Query
-from simpycity.model import SimpleModel, InstanceMethod
+from simpycity.model import SimpleModel
 from simpycity import config
 import psycopg2
 from optparse import OptionParser

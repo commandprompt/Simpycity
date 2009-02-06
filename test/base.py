@@ -1,6 +1,6 @@
 import unittest
 from simpycity.core import Function, Query
-from simpycity.model import SimpleModel, InstanceMethod
+from simpycity.model import SimpleModel
 from simpycity import config
 import psycopg2
 from optparse import OptionParser
@@ -72,9 +72,18 @@ class ModelTest(dbTest):
             rs = q.update(new_value="Instance function test")
             # Now, the rs should have returned a single row
             self.assertEquals(len(rs),1,"Update returned a single row.")
-            row = rs.fetchone()
-            self.assertEqual(row)
+            row = rs.next()
+            
+            self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
             f = SimpleUpdateModel(key=1)
+            self.assertEqual(
+                f.col['value'],
+                "Instance function test", 
+                "Key was not successfully set, got '%s', expected '%s'" % (
+                    f.col['value'], 
+                    "Instance function test" )  
+                )
+            
             
         except Exception, e:
             self.fail("Exception %s during test." % e)
@@ -87,19 +96,19 @@ class FunctionTest(dbTest):
         f = Function("test")
         self.failUnless(
             'meta_query' in [x.__name__ for x in type(f).mro()],
-            "Is an sql_function object."
+            "Isn't a Simpycity function object."
         )
         
     def testExecuteFunction(self):
         
         f = Function("test")
         rs = f()
-        self.assertEqual(len(rs),3,'Execute of function returns 3 rows.')
+        self.assertEqual(len(rs),3,'Error in execute of function test, expected 3 rows, got %s' % len(rs))
         
     def testPartialReturnSet(self):
         f = Function("test")
         rs = r(options=dict(columns=['id']))
-        self.assertEqual(len(rs),3,"Partial Result Set has 3 entries.")
+        self.assertEqual(len(rs),3,"Partial Result Set does not have 3 entries.")
         
         for row in rs:
             self.failUnlessRaises(
@@ -147,14 +156,14 @@ class QueryTest(dbTest):
         self.assertEqual(row.value,'Test row', 'Return row has value of "test row", as expected.')
     
     def testTypedReturn(self):
-        q = Query("test",['id'],SimpleReturn)
+        q = Query("test",['id'],return_type=SimpleReturn)
         rs = q(1)
         for row in rs:
             self.assertEqual
         
     def testPartialReturnSet(self):
         q = Query("test")
-        rs = r(returns=['id'])
+        rs = q(options=(dict(colums=['id'])))
         self.assertEqual(len(rs),3,"Partial Result Set has 3 entries, as expected.")
         
         for row in rs:
@@ -165,7 +174,7 @@ class QueryTest(dbTest):
             )
     def testPartialWithArguments(self):
         f = Function("test",['id'])
-        rs = r(1,dict(columns=['id']))
+        rs = r(1,options=dict(columns=['id']))
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
 
         for row in rs:
@@ -193,7 +202,7 @@ class SimpleReturn(SimpleModel):
 class SimpleInstanceModel(SimpleModel):
     table = ['id','value']
     
-    get = InstanceMethod("test_get",['id'])
+    get = Function("test_get",['id'])
     
 class SimpleLoaderModel(SimpleInstanceModel):
     __load__ = Function("test_get",['id'])
@@ -210,27 +219,27 @@ if __name__ == '__main__':
     p.add_option('-d','--database', dest="database", help="Sets the PG database to use for testing.")
     p.add_option('-u','--user', dest="user", help="Sets the PG user used for testing.")
     p.add_option('-p','--port', dest="port", help="Sets the PG database port used for testing. [5432]", default="5432")
-    p.add_option('-h','--host', dest="host", help="Sets the PG host system used for testing. [localhost]", default="localhost")
-    p.add_option('-h','--password', dest="password", help="Sets the PG user password.")
+    p.add_option('-H','--host', dest="host", help="Sets the PG host system used for testing. [localhost]", default="localhost")
+    p.add_option('-w','--password', dest="password", help="Sets the PG user password.")
     
     (options,args) = p.parse_args()
-    if "database" in options:
-        config.database = options['database']
+    if options.database:
+        config.database = options.database
     else:
         print "Must specify a test database (no default)"
         sys.exit(0)
-    if "user" in options:
-        config.user = options['user']
+    if options.user:
+        config.user = options.user
     else:
         print "Must specifiy a testing user (no default)"
         sys.exit(0)
-    if "port" in options:
-        config.port = options['port']
-    if "host" in options:
-        config.host = options['host']
+    if options.port:
+        config.port = options.port
+    if options.host:
+        config.host = options.host
     
-    if "password" in options:
-        config.password = options['password']
+    if options.password:
+        config.password = options.password
     else:
         print "Must specify a password for testing user (no default)"
         sys.exit(0)
