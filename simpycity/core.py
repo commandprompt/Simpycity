@@ -63,7 +63,10 @@ class meta_query(object):
         self.args = args
         self.return_type = return_type
         self.attr = {}
-        self.attr['handle'] = handle
+        if handle:
+            self.attr['handle'] = handle
+        else:
+            self.attr['handle'] = None
     
     def __call__(self, *in_args, **in_kwargs):
         
@@ -90,7 +93,7 @@ class meta_query(object):
                 self.query = ''
         except AttributeError:
             self.query = ''
-        d_out("Simpycity Meta Query: %s" % self.query)
+        d_out("meta_query.__call__: query is %s" % self.query)
         self.call_list = []
 #        self.args = in_args
         
@@ -157,7 +160,7 @@ class meta_query(object):
                     raise Exception("Spurious keyword argument passed.")
             for index,arg in enumerate(in_args):
                 call_list[index] = arg
-        d_out("meta_query __call__: Handle is %s" % handle)
+        d_out("meta_query.__call__: Handle is %s" % handle)
         return self.__execute__(cols, call_list, handle, condense)
         
     
@@ -192,6 +195,7 @@ class meta_query(object):
             if self.attr['handle'] is None:
                 d_out("meta_query.__execute__: Did not find handle, creating new.. ")
                 handle = Handle(config)
+                self.attr['handle'] = handle
                 d_out("meta_query.__execute__: Handle is %s" % self.attr['handle'])
             else:
                 d_out("meta_query.__execute__: Found object handle.. ")
@@ -260,7 +264,7 @@ class Raw(meta_query):
 class Query(meta_query):
     
     def form_query(self, columns):
-        
+        where_list = None
         if len(self.args) >= 1:
             where_list = [x+"=%s" for x in self.args]
         

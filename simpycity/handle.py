@@ -19,7 +19,7 @@ class Handle(object):
         if isolation_level is not None and isolation_level in [0,1,2]:
             self.isolation_level = isolation_level
         
-        d_out("Creating DB connection")
+        d_out("Handle.__init__: Creating DB connection")
         self.conn = psycopg2.connect(
             "host=%s port=%s dbname=%s user=%s password=%s" % (
                 self.config.host,
@@ -33,11 +33,11 @@ class Handle(object):
             self.conn.set_isolation_level(isolation_level)
         
     def cursor(self,*args,**kwargs):
-        d_out("Creating cursor..")
+        d_out("Handle.cursor: Creating cursor..")
         cur = self.conn.cursor(*args,**kwargs)
         return cur
     def commit(self):
-        d_out("Committing transactions.")
+        d_out("Handle.commit: Committing transactions.")
         return self.conn.commit()
         
     def __repr__(self):

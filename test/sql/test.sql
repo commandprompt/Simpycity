@@ -1,5 +1,4 @@
 BEGIN;
-
 CREATE TABLE test_table (
     id int,
     value text
@@ -29,5 +28,4 @@ $body$
     UPDATE test_table SET value =  $2 WHERE id = $1;
     SELECT TRUE;
 $body$ LANGUAGE sql;
-
 COMMIT;

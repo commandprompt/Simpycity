@@ -66,15 +66,15 @@ class Construct(object):
         mro = None
         try:
             mro = [x.__name__ for x in type(attr).mro()]
-            d_out("SimpleModel __getattribute__: Found a conventional attribute")
+            d_out("Construct.__getattribute__: Found a conventional attribute")
         except TypeError:
-            d_out("SimpleModel __getattribute__: Found an uninstanced attribute")
+            d_out("Construct.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
 
 
         if "meta_query" in mro:
 
-            d_out("Construct __getattribute__: Found meta_query %s" % name)
+            d_out("Construct.__getattribute__: Found meta_query %s" % name)
             def instance(*args,**kwargs):
 
                 if 'options' not in kwargs:
@@ -108,14 +108,14 @@ class SimpleModel(Construct):
         self.col = {}
             
         if handle is not None:
-            d_out("SimpleModel __init__: Found handle.")
+            d_out("SimpleModel.__init__: Found handle.")
             self.handle = handle
         else:
             if config is not None:
                 self.config = config
             else:
                 self.config = g_config
-            d_out("SimpleModel __init__: Did not find handle - forging.")
+            d_out("SimpleModel.__init__: Did not find handle - forging.")
             self.handle = Handle(self.config)
         
         if key is not None:
@@ -133,12 +133,12 @@ class SimpleModel(Construct):
                 rs = self.__load__(key,options=dict(handle=self.handle))
                 row = rs.next()
                 for item in self.table:
-                    d_out("Simpycity __load_by_key__: %s during load is %s" % (item, row[item]))
+                    d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, row[item]))
                     self.col[item] = row[item]
                 print self.col
             except AttributeError, e:
                 #pass
-                d_out("Simpycity __load_by_key: Caught an AttributeError: %s" % e)
+                d_out("SimpleModel.__load_by_key: Caught an AttributeError: %s" % e)
                 raise 
             except psycopg2.InternalError, e:
                 raise ProceduralException(e)

@@ -25,9 +25,7 @@ def setUpModule():
     config.user =       cfg.get("simpycity","user")
     config.host =       cfg.get("simpycity","host")
     config.password =   cfg.get("simpycity","password")
-    
-
-
+    config.debug = True
     
 class dbTest(unittest.TestCase):
     
@@ -80,12 +78,12 @@ class ModelTest(dbTest):
     def testInstanceLoader(self):
         q = SimpleLoaderModel(key=1)
         self.assertEqual(
-            q.id,
+            q.col['id'],
             1,
             "Model id is set to 1."
         )
         self.assertEqual(
-            q.value,
+            q.col['value'],
             "Test row",
             "Model value is set to 'Test row'."
         )
@@ -124,11 +122,13 @@ class FunctionTest(dbTest):
             "Isn't a Simpycity function object."
         )
         
+        
     def testExecuteFunction(self):
         
         f = Function("test")
         rs = f()
         self.assertEqual(len(rs),3,'Error in execute of function test, expected 3 rows, got %s' % len(rs))
+        
         
     def testPartialReturnSet(self):
         f = Function("test")
@@ -140,8 +140,11 @@ class FunctionTest(dbTest):
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except AttributeError,e:
+            except KeyError,e:
                 pass 
+            except Exception, e:
+                self.fail("Failed with exception: %s" %e)
+        
                 
     def testPartialWithArguments(self):
         f = Function("test",['id'])
@@ -153,13 +156,17 @@ class FunctionTest(dbTest):
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except AttributeError,e:
+            except KeyError,e:
                 pass
+            except Exception, e:
+                self.fail("Failed with exception: %s" %e)
+
     
     def testOutsideRange(self):
         f = Function("test",['id'])
         rs = f(4)
         self.assertEqual(len(rs),0,"Request outside range returns 0 rows.")
+
     
 class QueryTest(dbTest):
     
@@ -176,17 +183,27 @@ class QueryTest(dbTest):
     def testWhereQuery(self):
         
         q = Query("test_table",['id'])
-        rs = q(1)
+        try:
+            rs = q(1)
+        except Exception, e:
+            q.rollback()
+            self.fail("Failed with exception %s" % e)
+            
         self.assertEqual(len(rs),1,"ResultSet has a single entry")
         
         row = rs.next()
         rs.commit()
-        self.assertEqual(row['id'],'1','Return row has ID of 1, as expected.')
-        self.assertEqual(row['value'],'one', 'Return row has value of "one", as expected.')
+        self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
+        self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
     
     def testTypedReturn(self):
         q = Query("test_table",['id'],return_type=SimpleReturn)
-        rs = q(1)
+        try:
+            rs = q(1)
+        except Exception, e:
+            q.rollback()
+            self.fail("Failed with exception %s" % e)
+            
         for row in rs:
             self.failUnless(
                 'SimpleReturn' in [x.__name__ for x in type(row).mro()],
@@ -195,38 +212,52 @@ class QueryTest(dbTest):
         
     def testPartialReturnSet(self):
         q = Query("test_table")
-        rs = q(options=(dict(colums=['id'])))
+        try:
+            rs = q(options=(dict(columns=['id'])))
+        except Exception, e:
+            q.rollback()
+            self.fail("Failed with exception %s" % e)
+            
         self.assertEqual(len(rs),3,"Partial Result Set has 3 entries, as expected.")
         
         for row in rs:
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except AttributeError,e:
+            except KeyError,e:
                 pass
                 
     def testPartialWithArguments(self):
         f = Function("test",['id'])
-        rs = r(1,options=dict(columns=['id']))
+        rs = f(1,options=dict(columns=['id']))
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
 
         for row in rs:
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except AttributeError,e:
+            except KeyError,e:
                 pass
+            except Exception, e:
+                self.fail("Failed with exception: %s" %e)
+                f.rollback()
     
 class RawTest(dbTest):
     
     def testRunQuery(self):
-        r = Raw("select * from test where id = %s",[1])
+        r = Raw("select * from test_table where id = %s",['id'])
+        try:
+            rs = r(1)
+            
+        except Exception, e:
+            self.fail("Failed with exception %s" % e)
         
         self.assertEqual(len(rs), 1, "ResultSet has single entry.")
         
         row = rs.next()
-        self.assertEqual(row['id'],'1','Return row has ID of 1, as expected.')
-        self.assertEqual(row['value'],'Test row', 'Return row has value of "test row", as expected.')
+        rs.commit()
+        self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
+        self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
 
 class SimpleReturn(SimpleModel):
     
@@ -245,3 +276,6 @@ class SimpleUpdateModel(SimpleLoaderModel):
     update = Function("update_row",['id','new_value'])
     
        
+if __name__ == '__main__':
+    setUpModule()
+    unittest.main()
