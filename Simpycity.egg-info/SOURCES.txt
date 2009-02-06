@@ -1,6 +1,7 @@
 LICENSE
 setup.cfg
 setup.py
+test.ini
 Simpycity.egg-info/PKG-INFO
 Simpycity.egg-info/SOURCES.txt
 Simpycity.egg-info/dependency_links.txt

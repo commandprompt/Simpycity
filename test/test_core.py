@@ -1,5 +1,5 @@
 import unittest
-from simpycity.core import Function, Query
+from simpycity.core import Function, Query, Raw
 from simpycity.model import SimpleModel
 from simpycity import config
 import psycopg2
@@ -10,6 +10,8 @@ import ConfigParser
 
 ini = None
 mainConn = None
+create_sql = ""
+destroy_sql = ""
 
 def setUpModule():
     
@@ -24,33 +26,39 @@ def setUpModule():
     config.host =       cfg.get("simpycity","host")
     config.password =   cfg.get("simpycity","password")
     
-    
-    mainConn = psycopg2.connect("dbname=%s user=%s password=%s port=%s host=%s" %
-    
-        (
-            config.database,
-            config.user,
-            config.password,
-            config.port,
-            config.host
-        )
-    )
-    h = open("test/sql/db_test.sql","r")
-    create_sql = h.read()
-    mainConn.execute(create_sql)
-    mainConn.commit()
-    
-def tearDownModule():
-    
-    h = open("test/sql/db_test_unload.sql","r")
-    destroy_sql = h.read()
-    mainConn.execute(destroy_sql)
-    mainConn.commit()
-    mainConn.close()
-    
+
+
     
 class dbTest(unittest.TestCase):
-    pass
+    
+    def setUp(self):
+        
+        self.conn = psycopg2.connect("dbname=%s user=%s password=%s port=%s host=%s" %
+
+            (
+                config.database,
+                config.user,
+                config.password,
+                config.port,
+                config.host
+            )
+        )
+        h = open("test/sql/test.sql","r")
+        create_sql = h.read()
+        h.close()
+        cur = self.conn.cursor()
+        cur.execute(create_sql)
+        self.conn.commit()
+        
+    def tearDown(self):
+        h = open("test/sql/test_unload.sql","r")
+        destroy_sql = h.read()
+        h.close()
+        cur = self.conn.cursor()
+        cur.execute(destroy_sql)
+        self.conn.commit()
+        self.conn.close()
+        
 class ModelTest(dbTest):
     
     def testCreateModel(self):
@@ -124,26 +132,27 @@ class FunctionTest(dbTest):
         
     def testPartialReturnSet(self):
         f = Function("test")
-        rs = r(options=dict(columns=['id']))
+        rs = f(options=dict(columns=['id']))
         self.assertEqual(len(rs),3,"Partial Result Set does not have 3 entries.")
         
         for row in rs:
-            self.failUnlessRaises(
-                AttributeError,
-                row.value,
-                "Row %s 'value' column not present in return set." % row.id
-            )
+            try:
+                a = row['value']
+                self.fail("Expected no value column, found value column of %s" % row['value'])
+            except AttributeError,e:
+                pass 
+                
     def testPartialWithArguments(self):
         f = Function("test",['id'])
-        rs = r(1,dict(columns=['id']))
+        rs = f(1,options=dict(columns=['id']))
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
         
         for row in rs:
-            self.failUnlessRaises(
-                AttributeError,
-                row.value,
-                "'value' not present in returned row, in partial with arguments test."
-            )
+            try:
+                a = row['value']
+                self.fail("Expected no value column, found value column of %s" % row['value'])
+            except AttributeError,e:
+                pass
     
     def testOutsideRange(self):
         f = Function("test",['id'])
@@ -154,7 +163,7 @@ class QueryTest(dbTest):
     
     def testBareQuery(self):
         
-        q = Query("test")
+        q = Query("test_table")
         self.failUnless(
             'meta_query' in [x.__name__ for x in type(q).mro()],
             "Return from query creation is of type sql_function."
@@ -164,42 +173,46 @@ class QueryTest(dbTest):
         
     def testWhereQuery(self):
         
-        q = Query("test",['id'])
+        q = Query("test_table",['id'])
         rs = q(1)
         self.assertEqual(len(rs),1,"ResultSet has a single entry")
         
         row = rs.next()
-        self.assertEqual(row.id,'1','Return row has ID of 1, as expected.')
-        self.assertEqual(row.value,'Test row', 'Return row has value of "test row", as expected.')
+        self.assertEqual(row['id'],'1','Return row has ID of 1, as expected.')
+        self.assertEqual(row['value'],'one', 'Return row has value of "one", as expected.')
     
     def testTypedReturn(self):
-        q = Query("test",['id'],return_type=SimpleReturn)
+        q = Query("test_table",['id'],return_type=SimpleReturn)
         rs = q(1)
         for row in rs:
-            self.assertEqual
+            self.failUnless(
+                'SimpleReturn' in [x.__name__ for x in type(row).mro()],
+                "Return from Typed Return is not SimpleReturn."
+            )
         
     def testPartialReturnSet(self):
-        q = Query("test")
+        q = Query("test_table")
         rs = q(options=(dict(colums=['id'])))
         self.assertEqual(len(rs),3,"Partial Result Set has 3 entries, as expected.")
         
         for row in rs:
-            self.failUnlessRaises(
-                AttributeError,
-                row.value,
-                "Ros %s 'value' column not present in return set" % row.id
-            )
+            try:
+                a = row['value']
+                self.fail("Expected no value column, found value column of %s" % row['value'])
+            except AttributeError,e:
+                pass
+                
     def testPartialWithArguments(self):
         f = Function("test",['id'])
         rs = r(1,options=dict(columns=['id']))
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
 
         for row in rs:
-            self.failUnlessRaises(
-                AttributeError,
-                row.value,
-                "'value' not present in returned row, in partial with arguments test."
-            )
+            try:
+                a = row['value']
+                self.fail("Expected no value column, found value column of %s" % row['value'])
+            except AttributeError,e:
+                pass
     
 class RawTest(dbTest):
     
@@ -209,8 +222,8 @@ class RawTest(dbTest):
         self.assertEqual(len(rs), 1, "ResultSet has single entry.")
         
         row = rs.next()
-        self.assertEqual(row.id,'1','Return row has ID of 1, as expected.')
-        self.assertEqual(row.value,'Test row', 'Return row has value of "test row", as expected.')
+        self.assertEqual(row['id'],'1','Return row has ID of 1, as expected.')
+        self.assertEqual(row['value'],'Test row', 'Return row has value of "test row", as expected.')
 
 class SimpleReturn(SimpleModel):
     
