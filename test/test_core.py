@@ -6,34 +6,51 @@ import psycopg2
 from optparse import OptionParser
 import sys
 
-class dbTest(unittest.TestCase):
-    
-    def setUp(self):
-        self.conn = psycopg2.connect("dbname=%s user=%s password=%s port=%s host=%s" %
-        
-            (
-                config.database,
-                config.user,
-                config.password,
-                config.port,
-                config.host
-            )
-        )
-        h = open("sql/db_test.sql","r")
-        self.create_sql = h.read()
-        h.close()
-        h = open("sql/db_test_unload.sql","r")
-        self.destroy_sql = h.read()
-        self.conn.execute(self.create_sql)
-        
-        
-    def tearDown(self):
-        # remove the DB rows and tables and stuff.
-        
-        self.conn.execute(self.destroy_sql)
-        self.conn.close()
-        
+import ConfigParser
 
+ini = None
+mainConn = None
+
+def setUpModule():
+    
+    cfg = ConfigParser.ConfigParser()
+    ini = cfg.read("test.ini")
+    if not ini:
+        assert False
+        
+    config.database =   cfg.get("simpycity","database")
+    config.port =       cfg.get("simpycity","port")
+    config.user =       cfg.get("simpycity","user")
+    config.host =       cfg.get("simpycity","host")
+    config.password =   cfg.get("simpycity","password")
+    
+    
+    mainConn = psycopg2.connect("dbname=%s user=%s password=%s port=%s host=%s" %
+    
+        (
+            config.database,
+            config.user,
+            config.password,
+            config.port,
+            config.host
+        )
+    )
+    h = open("test/sql/db_test.sql","r")
+    create_sql = h.read()
+    mainConn.execute(create_sql)
+    mainConn.commit()
+    
+def tearDownModule():
+    
+    h = open("test/sql/db_test_unload.sql","r")
+    destroy_sql = h.read()
+    mainConn.execute(destroy_sql)
+    mainConn.commit()
+    mainConn.close()
+    
+    
+class dbTest(unittest.TestCase):
+    pass
 class ModelTest(dbTest):
     
     def testCreateModel(self):
@@ -212,35 +229,3 @@ class SimpleUpdateModel(SimpleLoaderModel):
     update = Function("update_row",['id','new_value'])
     
        
-if __name__ == '__main__':
-
-    # Collect commandline settings, initialize everything, be happy.
-    p = OptionParser()
-    p.add_option('-d','--database', dest="database", help="Sets the PG database to use for testing.")
-    p.add_option('-u','--user', dest="user", help="Sets the PG user used for testing.")
-    p.add_option('-p','--port', dest="port", help="Sets the PG database port used for testing. [5432]", default="5432")
-    p.add_option('-H','--host', dest="host", help="Sets the PG host system used for testing. [localhost]", default="localhost")
-    p.add_option('-w','--password', dest="password", help="Sets the PG user password.")
-    
-    (options,args) = p.parse_args()
-    if options.database:
-        config.database = options.database
-    else:
-        print "Must specify a test database (no default)"
-        sys.exit(0)
-    if options.user:
-        config.user = options.user
-    else:
-        print "Must specifiy a testing user (no default)"
-        sys.exit(0)
-    if options.port:
-        config.port = options.port
-    if options.host:
-        config.host = options.host
-    
-    if options.password:
-        config.password = options.password
-    else:
-        print "Must specify a password for testing user (no default)"
-        sys.exit(0)
-    unittest.main()

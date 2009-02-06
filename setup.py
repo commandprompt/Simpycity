@@ -15,9 +15,10 @@ setup(
     install_requires=[
         "psycopg2>=2.0.8",
     ],
-#    test_suite='nose.collector',
+    packages=find_packages(),
+    test_suite='nose.collector',
     license='LGPL',
-    packages=['simpycity','test'],
+#    packages=['simpycity','test'],
     include_package_data=True,
     zip_safe=True,
 )
