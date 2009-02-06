@@ -133,6 +133,7 @@ class FunctionTest(dbTest):
     def testPartialReturnSet(self):
         f = Function("test")
         rs = f(options=dict(columns=['id']))
+        rs.commit()
         self.assertEqual(len(rs),3,"Partial Result Set does not have 3 entries.")
         
         for row in rs:
@@ -145,6 +146,7 @@ class FunctionTest(dbTest):
     def testPartialWithArguments(self):
         f = Function("test",['id'])
         rs = f(1,options=dict(columns=['id']))
+        rs.commit()
         self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
         
         for row in rs:
@@ -178,6 +180,7 @@ class QueryTest(dbTest):
         self.assertEqual(len(rs),1,"ResultSet has a single entry")
         
         row = rs.next()
+        rs.commit()
         self.assertEqual(row['id'],'1','Return row has ID of 1, as expected.')
         self.assertEqual(row['value'],'one', 'Return row has value of "one", as expected.')
     
