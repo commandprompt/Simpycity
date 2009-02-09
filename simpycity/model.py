@@ -16,9 +16,6 @@ class Construct(object):
         a framework that allows for all queries in the Construct to operate
         under a single logical transaction.
         """
-        self.col = {}    
-        if key is not None:
-            self.__load_by_key__(key, *args, **kwargs)
             
         if handle is not None:
             d_out("Construct.__init__: Found handle.")
@@ -106,17 +103,7 @@ class SimpleModel(Construct):
         description using it.
         """
         self.col = {}
-            
-        if handle is not None:
-            d_out("SimpleModel.__init__: Found handle.")
-            self.handle = handle
-        else:
-            if config is not None:
-                self.config = config
-            else:
-                self.config = g_config
-            d_out("SimpleModel.__init__: Did not find handle - forging.")
-            self.handle = Handle(self.config)
+        super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
         
         if key is not None:
             self.__load_by_key__(key, *args, **kwargs)
@@ -170,6 +157,9 @@ class SimpleModel(Construct):
             d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
             
+        if name == '__load__':
+            
+            return attr
         
         if "meta_query" in mro:
                 

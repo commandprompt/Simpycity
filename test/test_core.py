@@ -77,6 +77,7 @@ class ModelTest(dbTest):
     
     def testInstanceLoader(self):
         q = SimpleLoaderModel(key=1)
+        q.commit()
         self.assertEqual(
             q.col['id'],
             1,
@@ -84,8 +85,8 @@ class ModelTest(dbTest):
         )
         self.assertEqual(
             q.col['value'],
-            "Test row",
-            "Model value is set to 'Test row'."
+            "one",
+            "Model value is not 'Test row', got %s" % q.col['value']
         )
         # So the model is set up correctly..
         
@@ -96,7 +97,7 @@ class ModelTest(dbTest):
             # Now, the rs should have returned a single row
             self.assertEquals(len(rs),1,"Update returned a single row.")
             row = rs.next()
-            
+            rs.commit()
             self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
             f = SimpleUpdateModel(key=1)
             self.assertEqual(
@@ -200,10 +201,11 @@ class QueryTest(dbTest):
         q = Query("test_table",['id'],return_type=SimpleReturn)
         try:
             rs = q(1)
+            
         except Exception, e:
             q.rollback()
             self.fail("Failed with exception %s" % e)
-            
+        rs.commit()
         for row in rs:
             self.failUnless(
                 'SimpleReturn' in [x.__name__ for x in type(row).mro()],
