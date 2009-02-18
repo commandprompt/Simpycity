@@ -70,14 +70,15 @@ class Construct(object):
 
 
         if "meta_query" in mro:
-
+            
             d_out("Construct.__getattribute__: Found meta_query %s" % name)
             def instance(*args,**kwargs):
-
+                my_args = kwargs.copy()
                 if 'options' not in kwargs:
-                    d_out("Construct __getattribute__: Didn't find options. Setting handle.")
+                    d_out("Construct __getattribute__: Didn't find options.")
                     my_args['options'] = {}
-                    my_args['options']['handle'] = self.handle
+                d_out("Construct __getattribute__: Setting handle.")
+                my_args['options']['handle'] = self.handle
                 return attr(**my_args)
             return instance
 
@@ -168,7 +169,7 @@ class SimpleModel(Construct):
                 
                 if args:
                     raise FunctionError("This function can only take keyword arguments.")
-                my_args = kwargs
+                my_args = kwargs.copy()
                 for arg in attr.args:
                     d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
                     d_out("SimpleModel.__getattribute__: %s" % self.col)
@@ -179,7 +180,8 @@ class SimpleModel(Construct):
                 if 'options' not in kwargs:
                     d_out("SimpleModel.__getattribute__: Didn't find options. Setting handle.")
                     my_args['options'] = {}
-                    my_args['options']['handle'] = self.handle
+                d_out("SimpleModel.__getattribute__: Setting handle.")
+                my_args['options']['handle'] = self.handle
                 rs = attr(**my_args)
                 d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
                 return rs

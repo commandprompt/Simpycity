@@ -1,6 +1,6 @@
 import unittest
 from simpycity.core import Function, Query, Raw
-from simpycity.model import SimpleModel
+from simpycity.model import SimpleModel, Construct
 from simpycity import config
 import psycopg2
 from optparse import OptionParser
@@ -56,6 +56,33 @@ class dbTest(unittest.TestCase):
         cur.execute(destroy_sql)
         self.conn.commit()
         self.conn.close()
+        
+class ConstructTest(dbTest):
+    
+    def testConstructFunction(self):
+        class o(Construct):
+            r = Raw("SELECT * FROM test_table")
+        
+        instance = o()
+        rs = instance.r()
+        self.failUnless(
+            'TypedResultSet' in [x.__name__ for x in type(rs).mro()],
+            "Construct function doers not return expected result set."
+        )
+        instance.rollback()
+        instance.close()
+    def testCreateConstruct(self):
+        
+        class o(Construct):
+            r = Raw("SELECT * FROM test_table")
+        
+        instance = o()
+        self.failUnless(
+            'Construct' in [x.__name__ for x in type(instance).mro()],
+            "Construct not created successfully."
+        )
+        instance.rollback()
+        instance.close()
         
 class ModelTest(dbTest):
     
