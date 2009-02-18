@@ -294,6 +294,8 @@ class SimpleResultSet(object):
         return self.wrapper(self.cursor.fetchone())
     def fetchone(self):
         return self.wrapper(self.cursor.fetchone())
+    def fetchall(self):
+        return self.wrapper(self.cursor.fetchall())
     def commit(self):
         return self.conn.commit()
     def rollback(self):
