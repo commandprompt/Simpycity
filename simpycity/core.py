@@ -1,7 +1,7 @@
 """
     COPYRIGHT 2008 Command Prompt, Inc.
     This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lessor General Public License as published by
+    it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation.
 
     This program is distributed in the hope that it will be useful,
@@ -117,6 +117,7 @@ class meta_query(object):
                 
             try:
                 condense = opts['fold_output']
+                d_out("meta_query.__call__: Found condense.")
             except KeyError:
                 condense=None
             
@@ -216,12 +217,28 @@ class meta_query(object):
         rs.statement = query
         rs.call_list = call_list
         rs.conn = handle
-        d_out("meta_query.__execute__: Returning rs of %s"%rs)
-        return rs
+        
+        d_out("meta_query.__execute__: Checking for condense..")
+        if condense:
+            d_out("meta_query.__execute__: Found condense..")
+            if len(rs) == 1:
+                
+                item = rs.next()
 
-    def form_query(self):
-        # This needs to be overridden
-        pass 
+                if len(item) == 1:
+                    return item[0]
+                else:
+                    return item
+            else:
+                # It's larger than a single row.
+                items = rs.fetchall()
+                if len(items[0]) == 1:
+                    return [x[0] for x in items]
+                else:
+                    return items
+        else:
+            d_out("meta_query.__execute__: condense not true, returning rs of %s" % rs)
+            return rs
         
     def commit(self):
         

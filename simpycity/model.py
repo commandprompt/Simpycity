@@ -182,7 +182,7 @@ class SimpleModel(Construct):
                     my_args['options'] = {}
                 d_out("SimpleModel.__getattribute__: Setting handle.")
                 my_args['options']['handle'] = self.handle
-                rs = attr(**my_args)
+                rs = attr(*args, **my_args)
                 d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
                 return rs
             return instance
