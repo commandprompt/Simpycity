@@ -84,7 +84,7 @@ class meta_query(object):
             row as a tuple, instead of a tuple of tuples comprising the entire
             set.
             For a single-column, single-row result set, it will return only
-            that value, instead of a tuple of tuple. ** NOT YET IMPLEMENTED **
+            that value, instead of a tuple of tuple.
         
         """
         
