@@ -232,10 +232,14 @@ class meta_query(object):
             else:
                 # It's larger than a single row.
                 items = rs.fetchall()
-                if len(items[0]) == 1:
-                    return [x[0] for x in items]
+                if len(items) >= 1:
+                    if len(items[0]) == 1:
+                        return [x[0] for x in items]
+                    else:
+                        return items
                 else:
-                    return items
+                    # There's nothing
+                    return None
         else:
             d_out("meta_query.__execute__: condense not true, returning rs of %s" % rs)
             return rs
