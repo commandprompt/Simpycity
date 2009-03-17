@@ -316,7 +316,7 @@ class SimpleResultSet(object):
     def fetchone(self):
         return self.wrapper(self.cursor.fetchone())
     def fetchall(self):
-        return self.wrapper(self.cursor.fetchall())
+        return [self.wrapper(x) for x in self.cursor.fetchall()]
     def commit(self):
         return self.conn.commit()
     def rollback(self):
