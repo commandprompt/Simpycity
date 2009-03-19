@@ -28,6 +28,7 @@ simpycity/__init__.py
 simpycity/config.py
 simpycity/core.py
 simpycity/handle.py
+simpycity/helpers.py
 simpycity/model.py
 test/__init__.py
 test/test_core.py
