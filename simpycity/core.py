@@ -211,6 +211,7 @@ class meta_query(object):
         try:
             rs = cursor.execute(query, call_list)
         except psycopg2.InternalError, e:
+            handle.rollback() # explicitly fix this?
             raise FunctionError(e)
             
         rs = TypedResultSet(cursor,self.return_type)
@@ -224,10 +225,19 @@ class meta_query(object):
             if len(rs) == 1:
                 
                 item = rs.next()
-
-                if len(item) == 1:
+                # Let's test a little more intelligently here.
+                # If we're using a return type, then we can assume that
+                # a one-length return set is going to be one object wrapping
+                # the return set.
+                
+                if self.return_type:
+                    return item
+                elif len(item) == 1:
+                    # It's a list of columns, with one entry.
                     return item[0]
                 else:
+                    # It's definitely a list, with multiple entries. Just 
+                    # return.
                     return item
             else:
                 # It's larger than a single row.
