@@ -1,3 +1,5 @@
+from simpycity.core import d_out
+
 class sprop(object):
     """A simpycity Property object, designed to handle argument mapping
     of Simpycity objects when those objects are pretending to be object
@@ -27,6 +29,7 @@ class sprop(object):
             setarg = False
             
             if '_PropertyContainer' in [x.__name__ for x in type(container).mro()]:
+                d_out("sprop.__call__(): Found a _PropertyContainer, setting container..")
                 container = container.obj
             
             
@@ -40,20 +43,25 @@ class sprop(object):
                     argmap[arg] = args[0]
             
             try:
-                handle = obj.handle
+                d_out("sprop.__call__(): Attemting to get handle..")
+                handle = container.handle
+                d_out("sprop.__call__(): Got handle. Setting argmap[options]")
                 argmap['options'] = {}
                 argmap['options']['handle'] = handle
-            except:
+            except Exception, e:
+                d_out("sprop.__call__(): Couldn't get handle, got exception %s" % e)
                 pass
                 
             if 'options' in argmap:
                 argmap['options']['fold_output'] = True
             else:
+                d_out("sprop.__call__(): Didn't find options; creating.")
                 argmap['options'] = {}
                 argmap['options']['fold_output'] = True
                 
             # Let's add some limited support for output folding here.
             rs = self.sim(**argmap)
+            return rs
         else:
             # no mappings required.
             return self.sim()

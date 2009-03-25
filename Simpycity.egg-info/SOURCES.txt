@@ -24,6 +24,8 @@ dist/Simpycity-0.2.0a4-py2.6.egg
 dist/Simpycity-0.2.0a5-py2.6.egg
 dist/Simpycity-0.2.0a6-py2.6.egg
 dist/Simpycity-0.2.0a7-py2.6.egg
+dist/Simpycity-0.2.0a8-py2.6.egg
+dist/Simpycity-0.2.0a9-py2.6.egg
 simpycity/__init__.py
 simpycity/config.py
 simpycity/core.py

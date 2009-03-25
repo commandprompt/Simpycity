@@ -211,6 +211,7 @@ class meta_query(object):
         try:
             rs = cursor.execute(query, call_list)
         except psycopg2.InternalError, e:
+            d_out("meta_query.__execute__: Caught an internal error: rolling back.")
             handle.rollback() # explicitly fix this?
             raise FunctionError(e)
             
@@ -243,7 +244,9 @@ class meta_query(object):
                 # It's larger than a single row.
                 items = rs.fetchall()
                 if len(items) >= 1:
-                    if len(items[0]) == 1:
+                    if self.return_type:
+                        return items
+                    elif len(items[0]) == 1:
                         return [x[0] for x in items]
                     else:
                         return items
