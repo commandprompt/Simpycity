@@ -99,10 +99,9 @@ class meta_query(object):
         
         keyargs = in_kwargs
         
-        if 'options' in in_kwargs or
-            'opt' in in_kwargs:
+        if 'options' in in_kwargs or 'opt' in in_kwargs:
             d_out("meta_query.__call__: Found a set of options..")
-            if options in in_kwargs:
+            if 'options' in in_kwargs:
                 
                 opts = in_kwargs['options']
                 del(keyargs['options'])
