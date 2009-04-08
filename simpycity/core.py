@@ -99,10 +99,16 @@ class meta_query(object):
         
         keyargs = in_kwargs
         
-        if 'options' in in_kwargs:
+        if 'options' in in_kwargs or
+            'opt' in in_kwargs:
             d_out("meta_query.__call__: Found a set of options..")
-            opts = in_kwargs['options']
-            del(keyargs['options'])
+            if options in in_kwargs:
+                
+                opts = in_kwargs['options']
+                del(keyargs['options'])
+            else:
+                opts = in_kwargs['opt']
+                del(keyargs['opt'])
             try:
                 columns = opts['columns']
             except KeyError:
@@ -120,6 +126,13 @@ class meta_query(object):
                 d_out("meta_query.__call__: Found condense.")
             except KeyError:
                 condense=None
+                
+            try:
+                condense = opts['reduce']
+                d_out("meta_query.__call__: found reduce")
+            except KeyError:
+                condense=None
+            
             
         else:
             columns = [] # an empty set.
@@ -335,7 +348,9 @@ class SimpleResultSet(object):
     def rollback(self):
         return self.conn.rollback()
     def wrapper(self,item):
-        return item    
+        return item
+        
+    
 
 class TypedResultSet(SimpleResultSet):
     

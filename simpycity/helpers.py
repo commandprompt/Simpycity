@@ -39,6 +39,7 @@ class sprop(object):
                 elif setarg:
                     raise AttributeError("More than 1 unmappable argument in property.")
                 else:
+                    
                     setarg = True
                     argmap[arg] = args[0]
             
@@ -64,7 +65,7 @@ class sprop(object):
             return rs
         else:
             # no mappings required.
-            return self.sim()
+            return self.sim(options=dict(fold_output=True))
         
 
 def multiproperty(definer):
