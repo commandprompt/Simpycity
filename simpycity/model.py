@@ -97,7 +97,7 @@ class SimpleModel(Construct):
     
     """
     
-    def __init__(self, key=None, config=None, handle=None, *args,**kwargs):
+    def __init__(self, config=None, handle=None, *args,**kwargs):
         """
         Sets up the objects' internal column.
         Tests for the presence of a primary key, and attempts to load a
@@ -106,30 +106,52 @@ class SimpleModel(Construct):
         self.col = {}
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
         
-        if key is not None:
-            self.__load_by_key__(key, *args, **kwargs)
+        
+        
+        if args or kwargs:
+            try:
+                d_out("SimpleModel.__init__: Got args of %s" % args)
+            except TypeError:
+                pass
+            d_out("SimpleModel.__init__: Got kwargs of %s" % kwargs)
+            try:
+                if self.__load__ is not None:
+                    self.__load_by_key__(*args, **kwargs)
+            except AttributeError, e:
+                pass
     
-    def __load_by_key__(self, key=None, *args,**kwargs):
+    def __load_by_key__(self, *args, **kwargs):
         """
         Private method. 
         Using the primary key from __init__, load the database row by primary
         key.
         """
-        # check for an __get function
-        if key is not None:
-            try:
-                rs = self.__load__(key,options=dict(handle=self.handle))
-                row = rs.next()
-                for item in self.table:
-                    d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, row[item]))
-                    self.col[item] = row[item]
-                print self.col
-            except AttributeError, e:
-                #pass
-                d_out("SimpleModel.__load_by_key: Caught an AttributeError: %s" % e)
-                raise 
-            except psycopg2.InternalError, e:
-                raise ProceduralException(e)
+        # check for an __load__ function
+        
+        if 'options' in kwargs:
+            opts = kwargs['options']
+            del(kwargs['options'])
+        else:
+            opts = {}
+        
+        opts['handle'] = self.handle
+        opts['reduce'] = True
+        
+        kwargs['options'] = opts
+        
+        try:
+            rs = self.__load__(*args, **kwargs)
+            for item in self.table:
+                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, rs[item]))
+                self.col[item] = rs[item]
+            d_out("SimpleModel.__load_by_key__: self.col is %s" % self.col)
+            
+        except AttributeError, e:
+            #pass
+            d_out("SimpleModel.__load_by_key: Caught an AttributeError: %s" % e)
+            raise 
+        except psycopg2.InternalError, e:
+            raise ProceduralException(e)
     
     def __getattribute__(self,name):
         

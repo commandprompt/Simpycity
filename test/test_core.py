@@ -103,7 +103,7 @@ class ModelTest(dbTest):
         
     
     def testInstanceLoader(self):
-        q = SimpleLoaderModel(key=1)
+        q = SimpleLoaderModel(id=1)
         q.commit()
         self.assertEqual(
             q.col['id'],
@@ -118,7 +118,7 @@ class ModelTest(dbTest):
         # So the model is set up correctly..
         
     def testInstanceFunctions(self):
-        q = SimpleUpdateModel(key=1)
+        q = SimpleUpdateModel(id=1)
         try:
             rs = q.update(new_value="Instance function test")
             # Now, the rs should have returned a single row
@@ -126,7 +126,7 @@ class ModelTest(dbTest):
             row = rs.next()
             rs.commit()
             self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
-            f = SimpleUpdateModel(key=1)
+            f = SimpleUpdateModel(id=1)
             self.assertEqual(
                 f.col['value'],
                 "Instance function test", 

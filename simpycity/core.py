@@ -76,11 +76,11 @@ class meta_query(object):
         Calling the function in this method causes the core SQL to be run and 
         a ResultSet returned. 
         
-        It accepts an options={} argument, which responds to the following 
+        It accepts an options/opt={} argument, which responds to the following 
         keys:
         * columns: Alters what columns are selected by the query.
         * handle: Overrides the stored handle with a customized version.
-        * fold_output: For single-row result sets, this will return only that
+        * fold_output/reduce: For single-row result sets, this will return only that
             row as a tuple, instead of a tuple of tuples comprising the entire
             set.
             For a single-column, single-row result set, it will return only
@@ -104,10 +104,15 @@ class meta_query(object):
             if 'options' in in_kwargs:
                 
                 opts = in_kwargs['options']
+                d_out("meta_query.__call__: Found options=")
                 del(keyargs['options'])
-            else:
+                
+            elif 'opt' in in_kwargs:
+                
                 opts = in_kwargs['opt']
-                del(keyargs['opt'])
+                d_out("meta_query.__call__: Found opt=")
+                del(in_kwargs['opt'])
+                
             try:
                 columns = opts['columns']
             except KeyError:
@@ -121,14 +126,14 @@ class meta_query(object):
                 handle = None
                 
             try:
-                condense = opts['fold_output']
-                d_out("meta_query.__call__: Found condense.")
-            except KeyError:
-                condense=None
-                
-            try:
-                condense = opts['reduce']
-                d_out("meta_query.__call__: found reduce")
+                if 'fold_output' in opts:
+                    condense = opts['fold_output']
+                    d_out("meta_query.__call__: Found fold_output.")
+                elif 'reduce' in opts:
+                    condense = opts['reduce']
+                    d_out("meta_query.__call__: found reduce")
+                else:
+                    condense=None
             except KeyError:
                 condense=None
             
