@@ -97,15 +97,16 @@ class SimpleModel(Construct):
     
     """
     
-    def __init__(self, config=None, handle=None, *args,**kwargs):
+    def __init__(self, *args,**kwargs):
         """
         Sets up the objects' internal column.
         Tests for the presence of a primary key, and attempts to load a
         description using it.
         """
         self.col = {}
-        super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
         
+        # should automatically pick up config= and handle=
+        super(SimpleModel, self).__init__(*args, **kwargs)
         
         
         if args or kwargs:
