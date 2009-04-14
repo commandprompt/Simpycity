@@ -105,9 +105,24 @@ class SimpleModel(Construct):
         """
         self.col = {}
         
-        # should automatically pick up config= and handle=
-        super(SimpleModel, self).__init__(*args, **kwargs)
+        if 'config' in kwargs:
+            config = kwargs['config']
+            del(kwargs['config'])
+        else:
+            config = None
+            
+        if 'handle' in kwargs:
+            handle = kwargs['handle']
+            del(kwargs['handle'])
+        else:
+            handle = None
         
+        # should automatically pick up config= and handle=
+        super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
+        
+        # config and handle have been dealt with, now.
+        
+            
         
         if args or kwargs:
             try:
