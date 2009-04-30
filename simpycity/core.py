@@ -157,25 +157,46 @@ class meta_query(object):
             
         d_out("meta_query.__call__: Requires args: %s" % len(self.args))
         d_out("meta_query.__call__: Got args: %i" % (len(keyargs) + len(in_args)))
-
+        
+        # If we were called with arguments
         if in_args >= 1:
+            
+            # Tests if the number of positional arguments + the number of
+            # keyword arguments is less than the number of arguments this
+            # instance was declared to require.
+            
             if len(in_args) < len(self.args) \
                 and len(keyargs) < len(self.args) \
                 and len(keyargs) + len(in_args) < len(self.args):
-                    raise Exception("Insufficient arguments.")
+                    raise Exception("Insufficient arguments: Expected %s, got %s" 
+                        % (len(self.args), len(in_args)+len(keyargs)) )
                 
+            # Tests if the number of positional arguments + the number of
+            # keyword arguments is GREATER than the number of arguments this
+            # instance was declared to require.
+            
             if len(in_args) > len(self.args) \
                 or len(keyargs) > len(self.args) \
                 or len(keyargs) + len(in_args) > len(self.args):
-                    raise Exception("Too many arguments.")
+                    raise Exception("Too many arguments: Expected %s, got %s" %
+                        ( len(self.args), len(in_args)+len(keyargs) )
+                    )
+            
+            # Create a fixed-length array equal to the number of arguments
+            # this instance requires.
+            
             call_list = ['' for x in xrange(len(self.args))]
+            
             if in_kwargs:
-                # we have to do some magic.
-                try:
-                    for arg in keyargs.iterkeys():
+                # Map the incoming keyword args positionally, based on the
+                # position of argument names in the core argument list.
+                
+                for arg in keyargs.iterkeys():
+                    try:
                         call_list[ self.args.index(arg) ] = keyargs[arg]
-                except ValueError:
-                    raise Exception("Spurious keyword argument passed.")
+                    except ValueError:
+                        raise Exception("Unknown keyword argument passed: %s" % arg)
+
             for index,arg in enumerate(in_args):
                 call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)

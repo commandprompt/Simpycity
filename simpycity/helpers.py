@@ -35,13 +35,15 @@ class sprop(object):
             
             for arg in self.sim.args:
                 if arg in container.col:
+                    d_out("sprop.__call__(): set %s to %s.." % (arg, container.col[arg]))
                     argmap[arg] = container.col[arg]
                 elif setarg:
+                    d_out("sprop.__call__(): Failed to set %s..." % (arg))
                     raise AttributeError("More than 1 unmappable argument in property.")
                 else:
-                    
                     setarg = True
                     argmap[arg] = args[0]
+                    d_out("sprop.__call__(): set %s to %s.." % (arg, args[0]))
             
             try:
                 d_out("sprop.__call__(): Attemting to get handle..")
