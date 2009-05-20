@@ -42,24 +42,23 @@ class Construct(object):
         else:
             raise AttributeError("Cannot call rollback without localized handle.")
         
-        
     def __getattribute__(self,name):
-
+        
         """
         Private method.
-
+        
         This function tests all attributes of the Construct if they are 
         Simpycity base objects.
         If they are a Simpycity object, the handle is forcibly overriden
         with the Constructs' handle, creating a logically grouped transaction
         state.
-
+        
         """
-
+        
         attr = object.__getattribute__(self,name)
         # This uses a try/catch because non-instance attributes (like 
         # __class__) will throw a TypeError if you try to use type(attr).mro().
-
+        
         mro = None
         try:
             mro = [x.__name__ for x in type(attr).mro()]
@@ -67,8 +66,8 @@ class Construct(object):
         except TypeError:
             d_out("Construct.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
-
-
+            
+            
         if "meta_query" in mro:
             
             d_out("Construct.__getattribute__: Found meta_query %s" % name)
@@ -81,9 +80,10 @@ class Construct(object):
                 my_args['options']['handle'] = self.handle
                 return attr(**my_args)
             return instance
-
+            
         else:
             return attr
+
 
 class SimpleModel(Construct):
     
@@ -121,8 +121,6 @@ class SimpleModel(Construct):
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
         
         # config and handle have been dealt with, now.
-        
-            
         
         if args or kwargs:
             try:

@@ -18,6 +18,7 @@ dist/Simpycity-0.1.4a3-py2.6.egg
 dist/Simpycity-0.1.4a4-py2.6.egg
 dist/Simpycity-0.1.4a5-py2.6.egg
 dist/Simpycity-0.2.0a10-py2.6.egg
+dist/Simpycity-0.2.0a11-py2.6.egg
 dist/Simpycity-0.2.0a1dev-py2.6.egg
 dist/Simpycity-0.2.0a2dev-py2.6.egg
 dist/Simpycity-0.2.0a3-py2.6.egg
