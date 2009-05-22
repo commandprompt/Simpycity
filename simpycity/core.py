@@ -20,6 +20,8 @@ import re
 import config
 from handle import Handle
 
+from simpycity import InternalError
+
 def d_out(text):
     
     if config.debug:
@@ -248,7 +250,7 @@ class meta_query(object):
 
         try:
             rs = cursor.execute(query, call_list)
-        except psycopg2.InternalError, e:
+        except InternalError, e:
             d_out("meta_query.__execute__: Caught an internal error: rolling back.")
             handle.rollback() # explicitly fix this?
             raise FunctionError(e)

@@ -2,10 +2,26 @@ import psycopg2
 from simpycity import config as g_config
 import weakref
 
+import simpycity
+
 def d_out(text):
     
     if g_config.debug:
         print text
+
+
+from psycopg2 import DataError, IntegrityError, InternalError, DatabaseError, InterfaceError, OperationalError, ProgrammingError, NotSupportedError
+
+simpycity.DataError = DataError
+simpycity.DatabaseError = DatabaseError
+simpycity.IntegrityError = IntegrityError
+simpycity.InternalError = InternalError
+simpycity.InterfaceError = InterfaceError
+simpycity.OperationalError = OperationalError
+simpycity.ProgrammingError = ProgrammingError
+simpycity.NotSupportedError = NotSupportedError
+
+
 
 class Handle(object):
     
@@ -102,7 +118,7 @@ class Manager(object):
         return len(self.handles[self.mark:])
         
     def __repr__(self):
-        return "Simpcity Manager: %i handles in scope, %i total" % (len(self), len(self.handles))
+        return "Simpycity Manager: %i handles in scope, %i total" % (len(self), len(self.handles))
         
     def pop(self):
         return self.handles.pop()

@@ -12,3 +12,15 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+# Sets up the basic exceptions for Simpycity. These values as part of the 
+# backend driver, and will be aliased after a Handle is instanced.
+
+DataError            = None
+DatabaseError        = None
+IntegrityError       = None
+InternalError        = None
+InterfaceError       = None
+OperationalError     = None
+ProgrammingError     = None
+NotSupportedError    = None
