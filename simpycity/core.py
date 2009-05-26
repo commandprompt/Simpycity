@@ -59,7 +59,7 @@ class meta_query(object):
     
     def __init__(self, name, args=[], return_type=None, handle=None):
         
-       """Base initialization TODO: Doc Me Better!!!! """
+        """Base initialization TODO: Doc Me Better!!!! """
         
         self.query_base = name
         self.args = args
