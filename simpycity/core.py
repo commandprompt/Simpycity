@@ -59,7 +59,7 @@ class meta_query(object):
     
     def __init__(self, name, args=[], return_type=None, handle=None):
         
-        """Base initialization"""
+       """Base initialization TODO: Doc Me Better!!!! """
         
         self.query_base = name
         self.args = args
@@ -227,7 +227,8 @@ class meta_query(object):
         '''
         Runs the stored query based on the arguments provided to
         __call__.
-         '''
+        '''
+
         query = self.form_query(columns)
         
         d_out("meta_query __execute__: Handle is %s" % handle)
