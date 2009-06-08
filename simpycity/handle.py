@@ -42,6 +42,13 @@ class Handle(object):
             self.isolation_level = isolation_level
         
         d_out("Handle.__init__: Creating DB connection")
+        self.__reconnect__()
+        d_out("Handle.__init__: Connection PID is %s" % self.conn.get_backend_pid() )
+        Manager.add(self)
+        if self.isolation_level is not None:
+            self.conn.set_isolation_level(isolation_level)
+            
+    def __reconnect__(self):
         self.conn = psycopg2.connect(
             "host=%s port=%s dbname=%s user=%s password=%s" % (
                 self.config.host,
@@ -51,17 +58,21 @@ class Handle(object):
                 self.config.password
             ),
         )
-        d_out("Handle.__init__: Connection PID is %s" % self.conn.get_backend_pid() )
-        Manager.add(self)
-        if self.isolation_level is not None:
-            self.conn.set_isolation_level(isolation_level)
-        
     def cursor(self,*args,**kwargs):
         d_out("Handle.cursor: Creating cursor..")
+        if self.conn.closed:
+            del(self.conn)
+            self.__reconnect__()
+        
         cur = self.conn.cursor(*args,**kwargs)
         return cur
     def commit(self):
         d_out("Handle.commit: Committing transactions.")
+        
+        if self.conn.closed:
+            # That's weird, and bad.
+            raise Exception("Attempting to commit a closed handle.")
+        
         return self.conn.commit()
         
     def __repr__(self):
@@ -77,11 +88,13 @@ class Handle(object):
             
     def rollback(self):
         
-        self.conn.rollback()
+        if not self.conn.closed:
+            self.conn.rollback()
         
     def __del__(self):
         d_out("Handle.__del__: destroying handle, de-allocating connection")
-        self.close()
+        if not self.conn.closed:
+            self.close()
         
 class Manager(object):
     
@@ -123,6 +136,16 @@ class Manager(object):
     def pop(self):
         return self.handles.pop()
         
+    def rollback(self):
+        l = self.handles[self.mark:]
+        l.reverse()
+        for handle in l:
+            self.pop()
+            h = handle()
+            if h is not None:
+                h.rollback()
+            else:
+                continue
     def close(self):
         l = self.handles[self.mark:]
         l.reverse()

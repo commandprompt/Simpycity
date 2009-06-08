@@ -302,8 +302,8 @@ class meta_query(object):
         
         """Commits the query, using the internal self.handle."""
         
-        if self.handle is not None:
-            self.handle.commit()
+        if self.attr['handle'] is not None:
+            self.attr['handle'].commit()
         else:
             raise Exception("Could not commit, no handle found.")
             
@@ -311,8 +311,8 @@ class meta_query(object):
         
         """Rolls back the query, using the internal self.handle."""
         
-        if self.handle is not None:
-            self.handle.rollback()
+        if self.attr['handle'] is not None:
+            self.attr['handle'].rollback()
         else:
             raise Exception("Could not rollback, no handle found.")
             

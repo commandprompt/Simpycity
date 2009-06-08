@@ -87,7 +87,7 @@ def multiproperty(definer):
     
 def classproperty(definer):
 
-    class _PropContainer(definer):
+    class _PropertyContainer(definer):
         pass
 
     return _PropContainer
