@@ -39,10 +39,13 @@ class sprop(object):
                     argmap[arg] = container.col[arg]
                 elif setarg:
                     d_out("sprop.__call__(): Failed to set %s..." % (arg))
-                    raise AttributeError("More than 1 unmappable argument in property.")
+                    raise AttributeError("More than 1 unmappable argument in property in %s" % container.__class__)
                 else:
                     setarg = True
-                    argmap[arg] = args[0]
+                    try:
+                        argmap[arg] = args[0]
+                    except IndexError, e:
+                        raise TypeError("Insufficient mappable args in %s" % container.__class__)
                     d_out("sprop.__call__(): set %s to %s.." % (arg, args[0]))
             
             try:
