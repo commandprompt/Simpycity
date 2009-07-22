@@ -32,6 +32,7 @@ class Handle(object):
     
     def __init__(self,config=None,isolation_level=None):
         
+        self.conn = None
         if config is not None:
             self.config = config
         else:
@@ -61,7 +62,7 @@ class Handle(object):
     def cursor(self,*args,**kwargs):
         d_out("Handle.cursor: Creating cursor..")
         if self.conn.closed:
-            del(self.conn)
+            self.conn = None
             self.__reconnect__()
         
         cur = self.conn.cursor(*args,**kwargs)

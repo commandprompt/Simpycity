@@ -155,10 +155,17 @@ class SimpleModel(Construct):
         
         try:
             rs = self.__load__(*args, **kwargs)
-            for item in self.table:
-                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, rs[item]))
-                self.col[item] = rs[item]
-            d_out("SimpleModel.__load_by_key__: self.col is %s" % self.col)
+            try:
+                for item in self.table:
+                    d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, rs[item]))
+                    self.col[item] = rs[item]
+                d_out("SimpleModel.__load_by_key__: self.col is %s" % self.col)
+            except TypeError, e:
+                # We can assume that we've been given a single record that 
+                # cannot be subscripted. Therefore, we'll set it to the first 
+                # value in self.table
+                d_out("Simplemodel.__load_by_key__: Got %s during load." % e)
+                self.set_col(self.table[0], rs)
             
         except AttributeError, e:
             #pass
