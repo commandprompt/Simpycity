@@ -1,0 +1,26 @@
+"""
+    COPYRIGHT 2008 Command Prompt, Inc.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Lessor General Public License as published by
+    the Free Software Foundation.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+# Sets up the basic exceptions for Simpycity. These values as part of the 
+# backend driver, and will be aliased after a Handle is instanced.
+
+DataError            = None
+DatabaseError        = None
+IntegrityError       = None
+InternalError        = None
+InterfaceError       = None
+OperationalError     = None
+ProgrammingError     = None
+NotSupportedError    = None
