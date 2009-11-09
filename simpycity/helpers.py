@@ -85,12 +85,22 @@ def multiproperty(definer):
                 setattr(_PropertyContainer, name, property(**self.values[name]()))
         def __repr__(self):
             return "Subproperty manager instance"
+            
+    c = _PropertyContainer
         
-    return property(_PropertyContainer)
+    return property(c)
+    
+# def classproperty(definer):
+# 
+#     class _PropertyContainer(definer):
+#         pass
+# 
+#     return _PropContainer
     
 def classproperty(definer):
-
-    class _PropertyContainer(definer):
-        pass
-
-    return _PropContainer
+    a = definer()
+    def cont(parent):
+        # a.col = {} 
+        # a.col['user_id'] = obj.user_id
+        return a
+    return property(cont)

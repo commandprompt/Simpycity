@@ -1,1 +1,2 @@
 psycopg2>=2.0.8
+Exceptable>=0.1.0

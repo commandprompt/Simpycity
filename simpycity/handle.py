@@ -10,16 +10,6 @@ def d_out(text):
         print text
 
 
-from psycopg2 import DataError, IntegrityError, InternalError, DatabaseError, InterfaceError, OperationalError, ProgrammingError, NotSupportedError
-
-simpycity.DataError = DataError
-simpycity.DatabaseError = DatabaseError
-simpycity.IntegrityError = IntegrityError
-simpycity.InternalError = InternalError
-simpycity.InterfaceError = InterfaceError
-simpycity.OperationalError = OperationalError
-simpycity.ProgrammingError = ProgrammingError
-simpycity.NotSupportedError = NotSupportedError
 
 
 

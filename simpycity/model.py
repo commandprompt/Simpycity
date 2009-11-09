@@ -97,7 +97,7 @@ class SimpleModel(Construct):
     
     """
     
-    def __init__(self, *args,**kwargs):
+    def __init__(self, *args, **kwargs):
         """
         Sets up the objects' internal column.
         Tests for the presence of a primary key, and attempts to load a
@@ -149,23 +149,26 @@ class SimpleModel(Construct):
             opts = {}
         
         opts['handle'] = self.handle
-        opts['reduce'] = True
+        #opts['reduce'] = True
         
         kwargs['options'] = opts
+        kwargs['options']['reduce'] = True
         
         try:
             rs = self.__load__(*args, **kwargs)
+            
             try:
                 for item in self.table:
-                    d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, rs[item]))
+                    d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, str(rs[item])))
                     self.col[item] = rs[item]
                 d_out("SimpleModel.__load_by_key__: self.col is %s" % self.col)
             except TypeError, e:
                 # We can assume that we've been given a single record that 
                 # cannot be subscripted. Therefore, we'll set it to the first 
                 # value in self.table
-                d_out("Simplemodel.__load_by_key__: Got %s during load." % e)
+                d_out("Simplemodel.__load_by_key__: Got Error %s during load." % e)
                 self.set_col(self.table[0], rs)
+                raise
             
         except AttributeError, e:
             #pass

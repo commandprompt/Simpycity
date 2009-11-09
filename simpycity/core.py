@@ -22,6 +22,8 @@ from handle import Handle
 
 from simpycity import InternalError
 
+from simpycity import exceptions
+
 def d_out(text):
     
     if config.debug:
@@ -57,14 +59,41 @@ class meta_query(object):
            Forcibly rolls back the handle.
     """
     
-    def __init__(self, name, args=[], return_type=None, handle=None):
+    def __init__(self, name, args=[], return_type=None, handle=None, returns_a="single"):
         
-        """Base initialization TODO: Doc Me Better!!!! """
+        """
+        
+         * name=    Sets the base name of the query. How this is used will be
+                    declared in the implementing subclass. For instance, in 
+                    the Function subclass, name is the name of the stored 
+                    procedure itself. In the case of Raw, it is the entire 
+                    query.
+           args=[]  A base empty list, declaring the arguments, if any, that 
+                    this query requires.
+           
+           return_type=  For use with the SimpleModel. Takes a SimpleModel as
+                         its argument, and maps all returned keys to the 
+                         SimpleModel object.
+                         ** TODO **
+                         Make return_type work with *any* object.
+           
+           handle=  Instead of creating a new handle to run this query, 
+                    utilize the provided handle. This is handled implicitly
+                    by the SimpleModel.
+           
+           returns_a=   A specific setting for the reduce= option implemented 
+                        during the execution stage. Specifically, certain 
+                        queries can be declared to exist as always expecting
+                        the return of a list. In these cases, it is most sane
+                        to allow a simple flag to say "I expect a list.".
+        
+        """
         
         self.query_base = name
         self.args = args
         self.return_type = return_type
         self.attr = {}
+        self.returns = returns_a
         if handle:
             self.attr['handle'] = handle
         else:
@@ -221,7 +250,9 @@ class meta_query(object):
         """
         
         self.attr['handle'] = handle
-            
+    
+    @exceptions.system
+    @exceptions.base
     def __execute__(self, columns, call_list, handle=None, condense=False):
         
         '''
@@ -248,13 +279,9 @@ class meta_query(object):
         d_out("meta_query.__execute__: Cursor is %s" % cursor)
         d_out("meta_query.__execute__: Query: %s" % ( query ) )
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
-
-        try:
-            rs = cursor.execute(query, call_list)
-        except InternalError, e:
-            d_out("meta_query.__execute__: Caught an internal error: rolling back.")
-            handle.rollback() # explicitly fix this?
-            raise FunctionError(e)
+        
+        
+        rs = cursor.execute(query, call_list)
             
         rs = TypedResultSet(cursor,self.return_type)
         rs.statement = query
@@ -266,21 +293,33 @@ class meta_query(object):
             d_out("meta_query.__execute__: Found condense..")
             if len(rs) == 1:
                 
+                
                 item = rs.next()
                 # Let's test a little more intelligently here.
                 # If we're using a return type, then we can assume that
                 # a one-length return set is going to be one object wrapping
                 # the return set.
                 
-                if self.return_type:
-                    return item
-                elif len(item) == 1:
-                    # It's a list of columns, with one entry.
-                    return item[0]
-                else:
-                    # It's definitely a list, with multiple entries. Just 
-                    # return.
-                    return item
+                if self.returns == "set":
+                    
+                    if self.return_type:
+                        return [item]
+                    elif len(item) == 1:
+                        return [item[0]]
+                    else:
+                        return [item]
+                    
+                elif self.returns == "single":
+                
+                    if self.return_type:
+                        return item
+                    elif len(item) == 1:
+                        # It's a list of columns, with one entry.
+                        return item[0]
+                    else:
+                        # It's definitely a list, with multiple entries. Just 
+                        # return.
+                        return item
             else:
                 # It's larger than a single row.
                 items = rs.fetchall()
@@ -377,8 +416,24 @@ class SimpleResultSet(object):
         return self.conn.rollback()
     def wrapper(self,item):
         return item
+    def __getitem__(self, key):
         
-    
+        """Gets the specified index key. This has the slight problem of 
+        requiring the entire result set up to the requested key to be pulled 
+        into the result set object.
+        
+        Use with care.
+        """
+        
+        if key > self.cursor.rowcount:
+            raise IndexError("Index %i out of range" % key )
+        
+        if self.__store__ is not None:
+            self.__store__ = self.cursor.fetchall()
+        return self.__store__[key]
+    def __setitem__(self, *args, **kwargs):
+        
+        raise AttributeError("Cannot set resultset values.")
 
 class TypedResultSet(SimpleResultSet):
     

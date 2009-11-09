@@ -13,14 +13,32 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-# Sets up the basic exceptions for Simpycity. These values as part of the 
-# backend driver, and will be aliased after a Handle is instanced.
+import psycopg2
 
-DataError            = None
-DatabaseError        = None
-IntegrityError       = None
-InternalError        = None
-InterfaceError       = None
-OperationalError     = None
-ProgrammingError     = None
-NotSupportedError    = None
+DataError = psycopg2.DataError
+DatabaseError = psycopg2.DatabaseError
+IntegrityError = psycopg2.IntegrityError
+InternalError = psycopg2.InternalError
+InterfaceError = psycopg2.InterfaceError
+OperationalError = psycopg2.OperationalError
+ProgrammingError = psycopg2.ProgrammingError
+NotSupportedError = psycopg2.NotSupportedError
+
+# DataError            = None
+# DatabaseError        = None
+# IntegrityError       = None
+# InternalError        = None
+# InterfaceError       = None
+# OperationalError     = None
+# ProgrammingError     = None
+# NotSupportedError    = None
+
+
+class PermissionError(InternalError):
+    pass
+
+class UnknownUserError(PermissionError):
+    pass
+    
+class NotFoundError(InternalError):
+    pass
