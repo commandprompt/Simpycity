@@ -32,7 +32,8 @@ class Context(object):
             def __init__(self, *args, **kwargs):
                 if 'handle' in kwargs:
                     del (kwargs['handle'])
-                super(internalModel, self).__init__(*args, handle=this_handle, **kwargs)
+		kwargs[handle] = this_handle
+                super(internalModel, self).__init__(*args, **kwargs)
         return internalModel
                 
     def commit(self):
