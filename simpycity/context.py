@@ -32,7 +32,7 @@ class Context(object):
             def __init__(self, *args, **kwargs):
                 if 'handle' in kwargs:
                     del (kwargs['handle'])
-		kwargs[handle] = this_handle
+		kwargs['handle'] = this_handle
                 super(internalModel, self).__init__(*args, **kwargs)
         return internalModel
                 
