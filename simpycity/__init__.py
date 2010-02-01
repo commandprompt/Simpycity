@@ -39,6 +39,10 @@ class PermissionError(InternalError):
 
 class UnknownUserError(PermissionError):
     pass
-    
+
 class NotFoundError(InternalError):
     pass
+
+class CannotSave(InternalError):
+    pass
+
