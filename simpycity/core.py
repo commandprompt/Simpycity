@@ -472,7 +472,7 @@ class TypedResultSet(SimpleResultSet):
             return item
         i = self.type(handle=self.conn)
         for col in item.keys():
-            i.set_col(col,item[col])
+            setattr(i, col, item[col])
         return i
 
 class FunctionError(BaseException):
