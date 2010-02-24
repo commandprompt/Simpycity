@@ -267,8 +267,8 @@ class SimpleModel(Construct):
 
             self.__dict__['__dirty'] = {}
         else:
-            from simpycity import CannotSave
-            raise CannotSave("Cannot save without __save__ declaration.")
+#            from simpycity import CannotSave
+            raise NotImplementedError("Cannot save without __save__ declaration.")
 
     def __setattr__(self, name, value):
         """Sets the provided name to the provided value, in the dirty
