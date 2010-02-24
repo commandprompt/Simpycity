@@ -274,14 +274,16 @@ class SimpleModel(Construct):
         """Sets the provided name to the provided value, in the dirty
         dictionary.
         This only occurs if the specified name is in the table specification."""
+        if hasattr(self, "table"):
+            if name in self.table:
+                if not hasattr(self, "__dict__"):
+                    self.__dict__ = {}
+                if '__dirty' not in self.__dict__:
+                    self.__dict__['__dirty'] = {}
 
-        if name in self.table:
-            if not hasattr(self, "__dict__"):
-                self.__dict__ = {}
-            if '__dirty' not in self.__dict__:
-                self.__dict__['__dirty'] = {}
-
-            self.__dict__['__dirty'][name] = value
+                self.__dict__['__dirty'][name] = value
+            else:
+                super(SimpleModel, self).__setattr__(name, value)
 
         else:
 #            setattr(self, name, value)
@@ -296,14 +298,17 @@ class SimpleModel(Construct):
         """
 
         cols = object.__getattribute__(self, "__dict__")
-        table = object.__getattribute__(self, "table")
 
-        if name in table:
-            if name in cols:
-                return cols[name]
-            elif name in cols['__dirty']:
-                return cols['__dirty'][name]
+        if hasattr(self, "table"):
+            table = object.__getattribute__(self, "table")
+
+            if name in table:
+                if name in cols:
+                    return cols[name]
+                elif name in cols['__dirty']:
+                    return cols['__dirty'][name]
         else:
+
             attr = object.__getattribute__(self, name)
             return attr
 
