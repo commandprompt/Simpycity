@@ -149,6 +149,8 @@ class meta_query(object):
 
         keyargs = in_kwargs
 
+        d_out("meta_query.__call__: Got args %s" % keyargs)
+
         if 'options' in in_kwargs or 'opt' in in_kwargs:
             d_out("meta_query.__call__: Found a set of options..")
             if 'options' in in_kwargs:
@@ -307,7 +309,6 @@ class meta_query(object):
         if condense:
             d_out("meta_query.__execute__: Found condense..")
             if len(rs) == 1:
-
 
                 item = rs.next()
                 # Let's test a little more intelligently here.
