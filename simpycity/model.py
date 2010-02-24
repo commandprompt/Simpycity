@@ -309,6 +309,6 @@ class SimpleModel(Construct):
                     return cols['__dirty'][name]
         else:
 
-            attr = object.__getattribute__(self, name)
+            attr = self.__getattribute__(self, name)
             return attr
 

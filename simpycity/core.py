@@ -161,7 +161,7 @@ class meta_query(object):
 
                 opts = in_kwargs['opt']
                 d_out("meta_query.__call__: Found opt=")
-                del(in_kwargs['opt'])
+                del(keyargs['opt'])
 
             try:
                 columns = opts['columns']
@@ -176,14 +176,11 @@ class meta_query(object):
                 handle = None
 
             try:
-                if 'fold_output' in opts:
-                    condense = opts['fold_output']
-                    d_out("meta_query.__call__: Found fold_output.")
-                elif 'reduce' in opts:
+                if 'reduce' in opts:
                     condense = opts['reduce']
                     d_out("meta_query.__call__: found reduce")
                 else:
-                    condense=None
+                    condense=True
             except KeyError:
                 condense=None
 
@@ -318,7 +315,7 @@ class meta_query(object):
                 # a one-length return set is going to be one object wrapping
                 # the return set.
 
-                if self.returns == "set":
+                if self.returns == "list":
 
                     if self.return_type:
                         return [item]
