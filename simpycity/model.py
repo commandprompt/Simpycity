@@ -305,8 +305,9 @@ class SimpleModel(Construct):
             if name in table:
                 if name in cols:
                     return cols[name]
-                elif name in cols['__dirty']:
-                    return cols['__dirty'][name]
+                elif cols.has_key("__dirty"):
+                    if name in cols['__dirty']:
+                        return cols['__dirty'][name]
         else:
 
             attr = self.__getattribute__(self, name)
