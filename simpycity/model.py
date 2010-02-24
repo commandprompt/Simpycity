@@ -199,7 +199,7 @@ class SimpleModel(Construct):
         mro = None
         try:
             mro = [x.__name__ for x in type(attr).mro()]
-            d_out("SimpleModel.__getattribute__: Found a conventional attribute")
+            d_out("SimpleModel.__getattribute__: Found a conventional attribute %s" % name)
         except TypeError:
             d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
@@ -219,9 +219,9 @@ class SimpleModel(Construct):
                 for arg in attr.args:
                     d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
                     d_out("SimpleModel.__getattribute__: %s" % self.__dict__)
-                    if arg in self.__dict__:
+                    if hasattr(self, arg):
                         d_out("SimpleModel.__getattribute__ InstanceMethod: found %s in col.." %arg)
-                        my_args[arg] = self.__dict__[arg]
+                        my_args[arg] = getattr(self, arg)
 
                 if 'options' not in kwargs:
                     d_out("SimpleModel.__getattribute__: Didn't find options. Setting handle.")
