@@ -219,7 +219,7 @@ class SimpleModel(Construct):
                 for arg in attr.args:
                     d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
                     d_out("SimpleModel.__getattribute__: %s" % self.__dict__)
-                    if hasattr(self, arg):
+                    if arg in self:
                         d_out("SimpleModel.__getattribute__ InstanceMethod: found %s in col.." %arg)
                         my_args[arg] = getattr(self, arg)
 
@@ -312,4 +312,9 @@ class SimpleModel(Construct):
 
             attr = self.__getattribute__(self, name)
             return attr
+
+    def __contains__(self, item):
+        if item in self.__dict__ or item in self.__dirty:
+            return True
+        return False
 
