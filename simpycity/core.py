@@ -13,8 +13,8 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import psycopg2
-from psycopg2 import extras
+#import psycopg2
+#from psycopg2 import extras
 import re
 
 import config
@@ -94,29 +94,27 @@ class meta_query(object):
         self.return_type = return_type
         self.__attr__ = {}
         self.returns = returns_a
-        if handle:
-            self.__attr__['handle'] = handle
-        else:
-            self.__attr__['handle'] = None
+
+        self.__attr__['handle'] = handle
 
         # So now, we need to load our Exceptable exceptions, if any, and map
         # them into the exceptable object.
 #        self.__get_exceptions__()
 
-    def __get_exceptions__(self):
+#    def __get_exceptions__(self):
 
-        if self.__attr__['handle']:
+#        if self.__attr__['handle']:
 
-            cur = self.__attr__['handle'].cursor(factory=extras.DictCursor)
+#            cur = self.__attr__['handle'].cursor(factory=extras.DictCursor)
 
-            rs = cur.execute("SELECT exception, description FROM exceptable.exceptions")
+#            rs = cur.execute("SELECT exception, description FROM exceptable.exceptions")
 
-            for row in rs.fetchall():
-                exceptions.base.map(row['exception'], row['description'])
-        else:
-            # Raise an exception? This is a somewhat odd
-            # state to end up in.
-            pass
+#            for row in rs.fetchall():
+#                exceptions.base.map(row['exception'], row['description'])
+#        else:
+#            # Raise an exception? This is a somewhat odd
+#            # state to end up in.
+#            pass
 
     def __call__(self, *in_args, **in_kwargs):
 
@@ -292,7 +290,7 @@ class meta_query(object):
                 handle = self.__attr__['handle']
 
 
-        cursor = handle.cursor(cursor_factory=extras.DictCursor)
+        cursor = handle.cursor()
         d_out("meta_query.__execute__: Cursor is %s" % cursor)
         d_out("meta_query.__execute__: Query: %s" % ( query ) )
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )

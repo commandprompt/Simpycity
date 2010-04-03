@@ -1,4 +1,5 @@
 import psycopg2
+from psycopg2 import extras
 from simpycity import config as g_config
 import weakref
 
@@ -55,8 +56,11 @@ class Handle(object):
             self.conn = None
             self.__reconnect__()
 
+        kwargs["cursor_factory"] = extras.DictCursor
+
         cur = self.conn.cursor(*args,**kwargs)
         return cur
+
     def commit(self):
         d_out("Handle.commit: Committing transactions.")
 
@@ -86,6 +90,8 @@ class Handle(object):
         d_out("Handle.__del__: destroying handle, de-allocating connection")
         if not self.conn.closed:
             self.close()
+
+
 
 class Manager(object):
 

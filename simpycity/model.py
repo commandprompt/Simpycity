@@ -314,6 +314,10 @@ class SimpleModel(Construct):
             return attr
 
     def __contains__(self, item):
+        """
+            Internal method.
+            Tests if the internal table declaration has a given key.
+        """
         if '__dirty' in self.__dict__:
 
             if item in self.__dict__ or item in self.__dict__['__dirty']:
