@@ -1,5 +1,4 @@
 LICENSE
-README
 setup.cfg
 setup.py
 test.ini
