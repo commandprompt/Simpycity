@@ -1,0 +1,146 @@
+Index: Simpycity.egg-info/SOURCES.txt
+===================================================================
+--- Simpycity.egg-info/SOURCES.txt	(revision 82)
++++ Simpycity.egg-info/SOURCES.txt	(working copy)
+@@ -1,4 +1,5 @@
+ LICENSE
++README
+ setup.cfg
+ setup.py
+ test.ini
+@@ -39,6 +40,7 @@
+ dist/Simpycity-0.2.2a2-py2.6.egg
+ dist/Simpycity-0.3.0-py2.5.egg
+ dist/Simpycity-0.3.0-py2.6.egg
++dist/Simpycity-0.3.0a1-py2.5.egg
+ simpycity/__init__.py
+ simpycity/config.py
+ simpycity/context.py
+Index: Simpycity.egg-info/PKG-INFO
+===================================================================
+--- Simpycity.egg-info/PKG-INFO	(revision 82)
++++ Simpycity.egg-info/PKG-INFO	(working copy)
+@@ -1,6 +1,6 @@
+ Metadata-Version: 1.0
+ Name: Simpycity
+-Version: 0.3.0a1
++Version: 0.3.1a2s
+ Summary: A simple functionally-oriented PostgreSQL DB access pattern.
+ Home-page: https://projects.commandprompt.com/public/simpycity/repo/dist
+ Author: Aurynn Shaw, Commandprompt, Inc.
+Index: setup.py
+===================================================================
+--- setup.py	(revision 82)
++++ setup.py	(working copy)
+@@ -7,7 +7,7 @@
+ 
+ setup(
+     name='Simpycity',
+-    version='0.3.0a2s',
++    version='0.3.1a2s',
+     description='A simple functionally-oriented PostgreSQL DB access pattern.',
+     author='Aurynn Shaw, Commandprompt, Inc.',
+     author_email='ashaw@commandprompt.com',
+Index: simpycity/handle.py
+===================================================================
+--- simpycity/handle.py	(revision 82)
++++ simpycity/handle.py	(working copy)
+@@ -45,9 +45,7 @@
+                     self.config.database,
+                     self.config.user,
+                     self.config.password
+-                )
+-
+-
++            )
+         self.conn = psycopg2.connect(self.dsn)
+ 
+     def cursor(self,*args,**kwargs):
+@@ -59,6 +57,15 @@
+         kwargs["cursor_factory"] = extras.DictCursor
+ 
+         cur = self.conn.cursor(*args,**kwargs)
++        # Test for liveliness.
++        try:
++            cur.execute("SELECT 1;")
++        except psycopg2.DatabaseError:
++            # DB has died.
++            self.conn = None
++            self.__reconnect__()
++            cur = self.conn.cursor(*args,**kwargs)
++            
+         return cur
+ 
+     def commit(self):
+@@ -89,69 +96,4 @@
+     def __del__(self):
+         d_out("Handle.__del__: destroying handle, de-allocating connection")
+         if not self.conn.closed:
+-            self.close()
+-
+-
+-
+-class Manager(object):
+-
+-    """
+-    The Manager is a process-wide structure that acts as a single point of
+-    control for all DB connections.
+-    The Manager is designed to capture all DB connections, storing them until
+-    later, and permitting easy reaping later.
+-
+-    The Manager does not hold on to strong references to the Handle objects -
+-    This allows "unchanged" behaviour to be exhibited by Simpycity, in that
+-    Managers are transparent and handles will reap on their original cycles.
+-    """
+-
+-    handles = []
+-
+-    @classmethod
+-    def add(cls, handle):
+-        """
+-
+-        """
+-        cls.handles.append(weakref.ref(handle))
+-
+-    def __init__(self):
+-
+-        self.mark = len(self.handles)
+-
+-    def __getitem__(self, id):
+-
+-        return self.handles[ self.mark+id ]
+-
+-    def __len__(self):
+-
+-        return len(self.handles[self.mark:])
+-
+-    def __repr__(self):
+-        return "Simpycity Manager: %i handles in scope, %i total" % (len(self), len(self.handles))
+-
+-    def pop(self):
+-        return self.handles.pop()
+-
+-    def rollback(self):
+-        l = self.handles[self.mark:]
+-        l.reverse()
+-        for handle in l:
+-            self.pop()
+-            h = handle()
+-            if h is not None:
+-                h.rollback()
+-            else:
+-                continue
+-    def close(self):
+-        l = self.handles[self.mark:]
+-        l.reverse()
+-        for handle in l:
+-            self.pop()
+-            h = handle()
+-            if h is not None:
+-                h.close()
+-            else:
+-                continue
+-        # Clear the list of handles.
+-
++            self.close()
+\ No newline at end of file

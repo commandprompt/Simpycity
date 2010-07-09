@@ -7,7 +7,7 @@ except ImportError:
 
 setup(
     name='Simpycity',
-    version='0.3.0a2s',
+    version='0.3.1a2s',
     description='A simple functionally-oriented PostgreSQL DB access pattern.',
     author='Aurynn Shaw, Commandprompt, Inc.',
     author_email='ashaw@commandprompt.com',

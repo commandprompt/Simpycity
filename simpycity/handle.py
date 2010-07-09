@@ -45,9 +45,7 @@ class Handle(object):
                     self.config.database,
                     self.config.user,
                     self.config.password
-                )
-
-
+            )
         self.conn = psycopg2.connect(self.dsn)
 
     def cursor(self,*args,**kwargs):
@@ -59,6 +57,15 @@ class Handle(object):
         kwargs["cursor_factory"] = extras.DictCursor
 
         cur = self.conn.cursor(*args,**kwargs)
+        # Test for liveliness.
+        try:
+            cur.execute("SELECT 1;")
+        except psycopg2.DatabaseError:
+            # DB has died.
+            self.conn = None
+            self.__reconnect__()
+            cur = self.conn.cursor(*args,**kwargs)
+            
         return cur
 
     def commit(self):
@@ -90,68 +97,3 @@ class Handle(object):
         d_out("Handle.__del__: destroying handle, de-allocating connection")
         if not self.conn.closed:
             self.close()
-
-
-
-class Manager(object):
-
-    """
-    The Manager is a process-wide structure that acts as a single point of
-    control for all DB connections.
-    The Manager is designed to capture all DB connections, storing them until
-    later, and permitting easy reaping later.
-
-    The Manager does not hold on to strong references to the Handle objects -
-    This allows "unchanged" behaviour to be exhibited by Simpycity, in that
-    Managers are transparent and handles will reap on their original cycles.
-    """
-
-    handles = []
-
-    @classmethod
-    def add(cls, handle):
-        """
-
-        """
-        cls.handles.append(weakref.ref(handle))
-
-    def __init__(self):
-
-        self.mark = len(self.handles)
-
-    def __getitem__(self, id):
-
-        return self.handles[ self.mark+id ]
-
-    def __len__(self):
-
-        return len(self.handles[self.mark:])
-
-    def __repr__(self):
-        return "Simpycity Manager: %i handles in scope, %i total" % (len(self), len(self.handles))
-
-    def pop(self):
-        return self.handles.pop()
-
-    def rollback(self):
-        l = self.handles[self.mark:]
-        l.reverse()
-        for handle in l:
-            self.pop()
-            h = handle()
-            if h is not None:
-                h.rollback()
-            else:
-                continue
-    def close(self):
-        l = self.handles[self.mark:]
-        l.reverse()
-        for handle in l:
-            self.pop()
-            h = handle()
-            if h is not None:
-                h.close()
-            else:
-                continue
-        # Clear the list of handles.
-

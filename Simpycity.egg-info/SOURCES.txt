@@ -1,4 +1,5 @@
 LICENSE
+README
 setup.cfg
 setup.py
 test.ini
@@ -39,6 +40,7 @@ dist/Simpycity-0.2.2a2-py2.5.egg
 dist/Simpycity-0.2.2a2-py2.6.egg
 dist/Simpycity-0.3.0-py2.5.egg
 dist/Simpycity-0.3.0-py2.6.egg
+dist/Simpycity-0.3.0a1-py2.5.egg
 simpycity/__init__.py
 simpycity/config.py
 simpycity/context.py
