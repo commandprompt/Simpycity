@@ -1,5 +1,38 @@
 from simpycity.core import d_out
 
+class prop (object):
+    
+    def __init__(self, fget, fset=None, fdel=None):
+        self._get = fget
+        self._set = fset
+        self._del = fdel
+    
+    def _exec(self, func, obj):
+        argMap = {}
+        for arg in self._get.args:
+            if hasattr(obj, arg):
+                argMap[arg] = getattr(obj, arg)
+            else :
+                # this is bad - we can't map the attribute.
+                raise AttributeError("Cannot map arguments: %s missing in source object %s" % (arg, obj))
+        # otherwise, we're good.
+        return func(**argMap)
+    def __get__(self, obj, objtype):
+        # Obeys the protocol standard
+        return self._exec(self._get, obj)
+        
+    def __set__(self, obj, value):
+        
+        if self._set is None:
+            raise AttributeError("cannot delete attribute")
+        return self._exec(self._set, obj)
+        
+    def __delete__(self, obj):
+        if self._del is None:
+            raise AttributeError("cannot delete attribute")
+        return self._exec(self._del, obj)
+        
+
 class sprop(object):
     """A simpycity Property object, designed to handle argument mapping
     of Simpycity objects when those objects are pretending to be object

@@ -19,7 +19,7 @@ class Construct(object):
 
         if handle is not None:
             d_out("Construct.__init__: Found handle.")
-            self.__dict__['__handle__'] = handle
+            self.handle = handle # use the setter.
         else:
             if config is not None:
                 self.config = config
@@ -84,24 +84,24 @@ class Construct(object):
         else:
             return attr
             
-    @property
-    def handle(self):
-        
-        h = self.__dict__["__handle__"]
-        if (h.open):
-            # Tests for the handle not being closed, and attempts to
-            # reopen the handle on the Handle side.
-            return h 
-            
-        
-    @handle.setter
-    def handle(self, value):
-
-        """Sets the handle object. 
-        Doesn't bother testing whether or not the handle is any good (this 
-        needs to be tested at the get) level.
-        """
-        self.__dict__['handle'] = value
+    # @property
+    # def handle(self):
+    #     
+    #     h = self.__dict__["__handle__"]
+    #     if (h.open):
+    #         # Tests for the handle not being closed, and attempts to
+    #         # reopen the handle on the Handle side.
+    #         return h 
+    #         
+    #     
+    # @handle.setter
+    # def handle(self, value):
+    # 
+    #     """Sets the handle object. 
+    #     Doesn't bother testing whether or not the handle is any good (this 
+    #     needs to be tested at the get) level.
+    #     """
+    #     self.__dict__['__handle__'] = value
 
 
 class SimpleModel(Construct):
@@ -315,21 +315,18 @@ class SimpleModel(Construct):
             returned first.
             Otherwise, the element in the standard dictionary is returned.
         """
-
+        
+        d_out("getattr: %s" % name)
         cols = object.__getattribute__(self, "__dict__")
-
-        if hasattr(self, "table"):
-            table = object.__getattribute__(self, "table")
-
-            if name in table:
-                if name in cols:
-                    return cols[name]
-                elif cols.has_key("__dirty"):
-                    if name in cols['__dirty']:
-                        return cols['__dirty'][name]
+        table = object.__getattribute__(self, "table")
+        if hasattr(self, "table") and (name in table or name in cols):
+            if name in cols:
+                return cols[name]
+            elif cols.has_key("__dirty"):
+                if name in cols['__dirty']:
+                    return cols['__dirty'][name]
         else:
-
-            attr = self.__getattribute__(self, name)
+            attr = object.__getattribute__(self, name) # Use the topmost parent version
             return attr
 
     def __contains__(self, item):

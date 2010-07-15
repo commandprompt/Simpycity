@@ -50,22 +50,21 @@ class Handle(object):
 
     def cursor(self,*args,**kwargs):
         d_out("Handle.cursor: Creating cursor..")
-        if self.conn.closed:
-            self.conn = None
-            self.__reconnect__()
+        if self.open:
+            kwargs["cursor_factory"] = extras.DictCursor
 
-        kwargs["cursor_factory"] = extras.DictCursor
-
-        cur = self.conn.cursor(*args,**kwargs)
-        # Test for liveliness.
-        try:
-            cur.execute("SELECT 1;")
-        except psycopg2.DatabaseError:
-            # DB has died.
-            self.conn = None
-            self.__reconnect__()
             cur = self.conn.cursor(*args,**kwargs)
-        return cur
+            # Test for liveliness.
+            try:
+                cur.execute("SELECT 1;")
+            except psycopg2.DatabaseError:
+                # DB has died.
+                self.conn = None
+                self.__reconnect__()
+                cur = self.conn.cursor(*args,**kwargs)
+            return cur
+        else:
+            d_out("not open. Buh?")
 
     def commit(self):
         d_out("Handle.commit: Committing transactions.")
@@ -100,7 +99,8 @@ class Handle(object):
     @property
     def open(self):
         try:
-            self.conn.get_backend_pid()
+            if self.conn.get_backend_pid():
+                return True
         except psycopg2.InterfaceError, e:
             if str(e) == "connection already closed":
                 # We already lost our connection. Attempt to reforge it.
