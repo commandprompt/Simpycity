@@ -23,5 +23,13 @@ setup(
 #    packages=['simpycity','test'],
     include_package_data=True,
     zip_safe=False,
+    classifiers=[
+        "Development Status :: 4 - Beta",
+        "Intended Audience :: Developers",
+        "License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)",
+        "Operating System :: MacOS X",
+        "Operating System :: Unix",
+        "Topic :: Software Development :: Databases",
+    ],
 )
 
