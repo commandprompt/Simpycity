@@ -11,7 +11,8 @@ setup(
     description='A simple functionally-oriented PostgreSQL DB access library.',
     author='Aurynn Shaw, Commandprompt, Inc.',
     author_email='ashaw@commandprompt.com',
-    url='https://projects.commandprompt.com/public/simpycity/repo/dist',
+    url='https://public.commandprompt.com/projects/simpycity/wiki',
+    download_url='https://projects.commandprompt.com/public/simpycity/repo/dist/Simpycity-0.3.1.tar.gz',
     install_requires=[
         "psycopg2>=2.0.8",
         "Exceptable>=0.1.0"
