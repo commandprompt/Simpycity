@@ -1,2 +1,0 @@
-simpycity
-test
