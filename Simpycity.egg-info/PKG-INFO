@@ -9,3 +9,9 @@ License: LGPL
 Download-URL: https://projects.commandprompt.com/public/simpycity/repo/dist/Simpycity-0.3.1.tar.gz
 Description: UNKNOWN
 Platform: UNKNOWN
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: GNU Library or Lesser General Public License (LGPL)
+Classifier: Operating System :: MacOS X
+Classifier: Operating System :: Unix
+Classifier: Topic :: Software Development :: Databases
