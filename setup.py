@@ -15,7 +15,7 @@ setup(
     download_url='https://projects.commandprompt.com/public/simpycity/repo/dist/Simpycity-0.3.1.tar.gz',
     install_requires=[
         "psycopg2>=2.0.8",
-        "Exceptable>=0.1.0"
+#        "exceptable>=0.1.0"
     ],
     packages=find_packages(),
     test_suite='nose.collector',

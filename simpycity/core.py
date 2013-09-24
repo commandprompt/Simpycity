@@ -22,7 +22,7 @@ from handle import Handle
 
 from simpycity import InternalError
 
-from simpycity import exceptions
+#from simpycity import exceptions
 
 def d_out(text):
 
@@ -266,8 +266,8 @@ class meta_query(object):
         """
         self.__attr__['handle'] = handle
 
-    @exceptions.system
-    @exceptions.base
+#    @exceptions.system
+#    @exceptions.base
     def __execute__(self, columns, call_list, handle=None, condense=False):
 
         '''
