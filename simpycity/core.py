@@ -282,7 +282,7 @@ class meta_query(object):
         if handle is None:
             if self.__attr__['handle'] is None:
                 d_out("meta_query.__execute__: Did not find handle, creating new.. ")
-                handle = Handle(config)
+                handle = Handle()
                 self.__attr__['handle'] = handle
                 d_out("meta_query.__execute__: Handle is %s" % self.__attr__['handle'])
             else:
