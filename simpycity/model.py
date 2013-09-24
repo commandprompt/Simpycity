@@ -186,6 +186,7 @@ class SimpleModel(Construct):
 
         d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
         try:
+            # TODO: why list them explicitly in the table attribute?
             for item in self.table:
                 d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, str(rs[item])))
                 self.__dict__[item] = rs[item]
@@ -323,9 +324,8 @@ class SimpleModel(Construct):
         cols = object.__getattribute__(self, "__dict__")
         if name in cols:
             return cols[name]
-        elif cols.has_key("__dirty"):
-            if name in cols['__dirty']:
-                return cols['__dirty'][name]
+        elif cols.has_key("__dirty") and name in cols['__dirty']:
+            return cols['__dirty'][name]
         else:
             attr = object.__getattribute__(self, name) # Use the topmost parent version
             return attr
