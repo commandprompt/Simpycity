@@ -1,3 +1,4 @@
+from simpycity import NotFoundError
 from simpycity.core import Function, FunctionError, ProceduralException, Raw, Query
 from simpycity.handle import Handle
 from simpycity import config as g_config
@@ -62,9 +63,9 @@ class Construct(object):
         mro = None
         try:
             mro = [x.__name__ for x in type(attr).mro()]
-            d_out("Construct.__getattribute__: Found a conventional attribute")
+            #d_out("Construct.__getattribute__: Found a conventional attribute")
         except TypeError:
-            d_out("Construct.__getattribute__: Found an uninstanced attribute")
+            #d_out("Construct.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
 
 
@@ -122,6 +123,7 @@ class SimpleModel(Construct):
         Tests for the presence of a primary key, and attempts to load a
         description using it.
         """
+
         self.__dict__ = {}
 
         if 'config' in kwargs:
@@ -147,11 +149,9 @@ class SimpleModel(Construct):
             except TypeError:
                 pass
             d_out("SimpleModel.__init__: Got kwargs of %s" % kwargs)
-            try:
-                if self.__load__ is not None:
-                    self.__load_by_key__(*args, **kwargs)
-            except AttributeError, e:
-                pass
+
+            if hasattr(self, '__load__'):
+                self.__load_by_key__(*args, **kwargs)
 
     def __load_by_key__(self, *args, **kwargs):
         """
@@ -173,28 +173,30 @@ class SimpleModel(Construct):
         kwargs['options'] = opts
         kwargs['options']['reduce'] = True
 
+        rs = None
         try:
             rs = self.__load__(*args, **kwargs)
+        except psycopg2.InternalError, e:
+            d_out("pgerror=%s pgcode=%s diag=%s" % (e.pgerror, e.pgcode, e.diag))
+            if not (e.pgcode == 'P0002'): # no_data_found
+                raise # as InternalError
 
-            try:
-                for item in self.table:
-                    d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, str(rs[item])))
-                    self.__dict__[item] = rs[item]
-                d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
-            except TypeError, e:
-                # We can assume that we've been given a single record that
-                # cannot be subscripted. Therefore, we'll set it to the first
-                # value in self.table
-                d_out("Simplemodel.__load_by_key__: Got Error %s during load." % e)
-                self.set_col(self.table[0], rs)
-                raise
+        if rs is None:
+            raise NotFoundError("Record not found in __load__ (%s)" % self.__class__)
 
-        except AttributeError, e:
-            #pass
-            d_out("SimpleModel.__load_by_key: Caught an AttributeError: %s" % e)
+        d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
+        try:
+            for item in self.table:
+                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, str(rs[item])))
+                self.__dict__[item] = rs[item]
+            d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
+        except TypeError, e:
+            # We can assume that we've been given a single record that
+            # cannot be subscripted. Therefore, we'll set it to the first
+            # value in self.table
+            d_out("Simplemodel.__load_by_key__: TypeError: %s" % e)
+            self.__setattr__(self.table[0], rs)
             raise
-        except psycopg2.InternalError, e: # This is irritatingly wrong.
-            raise ProceduralException(e)
 
     def __getattribute__(self,name):
 
@@ -218,9 +220,9 @@ class SimpleModel(Construct):
         mro = None
         try:
             mro = [x.__name__ for x in type(attr).mro()]
-            d_out("SimpleModel.__getattribute__: Found a conventional attribute %s" % name)
+            #d_out("SimpleModel.__getattribute__: Found a conventional attribute %s" % name)
         except TypeError:
-            d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
+            #d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
 
         if name == '__load__':
@@ -317,14 +319,13 @@ class SimpleModel(Construct):
         """
         
         d_out("getattr: %s" % name)
+#        if hasattr(self, "__dict__"):
         cols = object.__getattribute__(self, "__dict__")
-        table = object.__getattribute__(self, "table")
-        if hasattr(self, "table") and (name in table or name in cols):
-            if name in cols:
-                return cols[name]
-            elif cols.has_key("__dirty"):
-                if name in cols['__dirty']:
-                    return cols['__dirty'][name]
+        if name in cols:
+            return cols[name]
+        elif cols.has_key("__dirty"):
+            if name in cols['__dirty']:
+                return cols['__dirty'][name]
         else:
             attr = object.__getattribute__(self, name) # Use the topmost parent version
             return attr
