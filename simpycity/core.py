@@ -59,7 +59,7 @@ class meta_query(object):
            Forcibly rolls back the handle.
     """
 
-    def __init__(self, name, args=[], return_type=None, handle=None, returns_a="single"):
+    def __init__(self, name, args=[], return_type=None, handle=None, returns_a="single", callback=None):
 
         """
 
@@ -94,6 +94,7 @@ class meta_query(object):
         self.return_type = return_type
         self.__attr__ = {}
         self.returns = returns_a
+        self.callback = callback
 
         self.__attr__['handle'] = handle
 
@@ -298,7 +299,7 @@ class meta_query(object):
 
         rs = cursor.execute(query, call_list)
 
-        rs = TypedResultSet(cursor,self.return_type)
+        rs = TypedResultSet(cursor,self.return_type,callback=self.callback)
         rs.statement = query
         rs.call_list = call_list
         rs.conn = handle
@@ -451,9 +452,11 @@ class SimpleResultSet(object):
 
 class TypedResultSet(SimpleResultSet):
 
-    def __init__(self,cursor,i_type,*args,**kwargs):
+    def __init__(self,cursor,i_type,callback=None,*args,**kwargs):
         self.cursor=cursor
         self.type=i_type
+        self.callback=callback
+
     def __iter__(self):
         row = self.cursor.fetchone()
         while row:
@@ -462,13 +465,15 @@ class TypedResultSet(SimpleResultSet):
             row = self.cursor.fetchone()
             if row is None:
                 raise StopIteration()
-    def wrapper(self,item):
 
+    def wrapper(self,item):
         if self.type is None:
             return item
         i = self.type(handle=self.conn)
         for col in item.keys():
             setattr(i, col, item[col])
+        if self.callback:
+            self.callback(i)
         return i
 
 class FunctionError(BaseException):
