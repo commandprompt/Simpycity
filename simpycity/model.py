@@ -10,6 +10,8 @@ def d_out(text):
         print text
 
 class Construct(object):
+    config = None
+    handle = None
 
     def __init__(self, config=None, handle=None, *args,**kwargs):
         """
@@ -18,16 +20,14 @@ class Construct(object):
         under a single logical transaction.
         """
 
-        if handle is not None:
-            d_out("Construct.__init__: Found handle.")
-            self.handle = handle # use the setter.
-        else:
-            if config is not None:
-                self.config = config
-            else:
-                self.config = g_config
-            d_out("Construct.__init__: Did not find handle - forging.")
-            self.handle = Handle(self.config)
+        d_out("Construct.__init__: config=%s, handle=%s" % (config, handle))
+
+        if not self.config:
+            self.config = config or g_config
+
+        if not self.handle:
+            self.handle = handle or Handle(config=self.config)
+
 
     def commit(self):
         if self.handle is not None:
@@ -124,8 +124,6 @@ class SimpleModel(Construct):
         description using it.
         """
 
-        self.__dict__ = {}
-
         if 'config' in kwargs:
             config = kwargs['config']
             del(kwargs['config'])
@@ -138,11 +136,6 @@ class SimpleModel(Construct):
         else:
             handle = None
 
-        # should automatically pick up config= and handle=
-        super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
-
-        # config and handle have been dealt with, now.
-
         if args or kwargs:
             try:
                 d_out("SimpleModel.__init__: Got args of %s" % args)
@@ -150,6 +143,11 @@ class SimpleModel(Construct):
                 pass
             d_out("SimpleModel.__init__: Got kwargs of %s" % kwargs)
 
+        # should automatically pick up config= and handle=
+        super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
+
+        # config and handle have been dealt with, now.
+        if args or kwargs:
             if hasattr(self, '__load__'):
                 self.__load_by_key__(*args, **kwargs)
 
@@ -258,8 +256,10 @@ class SimpleModel(Construct):
         else:
             return attr
 
+
     def set(self,col,val):
         self.__dict__[col] = val
+
 
     def save(self):
 
@@ -287,29 +287,27 @@ class SimpleModel(Construct):
                 else:
                     self.__dict__[arg] = self.__dict__['__dirty'][arg]
 
-            self.__dict__['__dirty'] = {}
+            del(self.__dict__['__dirty'])
         else:
 #            from simpycity import CannotSave
             raise NotImplementedError("Cannot save without __save__ declaration.")
+
 
     def __setattr__(self, name, value):
         """Sets the provided name to the provided value, in the dirty
         dictionary.
         This only occurs if the specified name is in the table specification."""
-        if hasattr(self, "table"):
+
+        if hasattr(self, 'table'):
             if name in self.table:
-                if not hasattr(self, "__dict__"):
-                    self.__dict__ = {}
                 if '__dirty' not in self.__dict__:
                     self.__dict__['__dirty'] = {}
 
                 self.__dict__['__dirty'][name] = value
-            else:
-                super(SimpleModel, self).__setattr__(name, value)
+                return
 
-        else:
-#            setattr(self, name, value)
-            super(SimpleModel, self).__setattr__(name, value)
+        object.__setattr__(self, name, value)
+
 
     def __getattr__(self, name):
         """
@@ -319,26 +317,20 @@ class SimpleModel(Construct):
             Otherwise, the element in the standard dictionary is returned.
         """
         
-        d_out("getattr: %s" % name)
-#        if hasattr(self, "__dict__"):
-        cols = object.__getattribute__(self, "__dict__")
-        if name in cols:
-            return cols[name]
-        elif cols.has_key("__dirty") and name in cols['__dirty']:
-            return cols['__dirty'][name]
-        else:
-            attr = object.__getattribute__(self, name) # Use the topmost parent version
-            return attr
+        if self.__dict__.has_key('__dirty') and name in self.__dict__['__dirty']:
+            return self.__dict__['__dirty'][name]
+
+        if name in self.__dict__:
+            return self.__dict__[name]
+
+        attr = object.__getattribute__(self, name) # Use the topmost parent version
+        return attr
+
 
     def __contains__(self, item):
         """
             Internal method.
             Tests if the internal table declaration has a given key.
         """
-        if '__dirty' in self.__dict__:
 
-            if item in self.__dict__ or item in self.__dict__['__dirty']:
-                return True
-        elif item in self.__dict__:
-            return True
-        return False
+        return item in self.__dict__ or '__dirty' in self.__dict__ and item in self.__dict__['__dirty']
