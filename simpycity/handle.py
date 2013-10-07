@@ -69,7 +69,10 @@ class Handle(object):
         return self.conn.commit()
 
     def __repr__(self):
-        return "Handle object: pid %s" % self.conn.get_backend_pid()
+        if not self.conn.closed:
+            return "Handle object: pid %s" % self.conn.get_backend_pid()
+        else:
+            return "Handle object: no pid (closed)"
 
     def close(self,*args,**kwargs):
         d_out("Handle.close: de-allocating connection" )
