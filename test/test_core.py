@@ -1,62 +1,85 @@
 import unittest
-from simpycity.core import Function, Query, Raw
-from simpycity.model import SimpleModel, Construct
 from simpycity import config
+from simpycity.core import Function as BaseFunction, Query as BaseQuery, Raw as BaseRaw
+from simpycity.model import SimpleModel as BaseSimpleModel, Construct as BaseConstruct
+from simpycity.handle import Handle
 import psycopg2
 from optparse import OptionParser
 import sys
 
 import ConfigParser
 
-ini = None
-mainConn = None
-create_sql = ""
-destroy_sql = ""
+handle = None
 
 def setUpModule():
     
     cfg = ConfigParser.ConfigParser()
     ini = cfg.read("test.ini")
-    if not ini:
-        assert False
-        
+    assert(ini)
+
     config.database =   cfg.get("simpycity","database")
     config.port =       cfg.get("simpycity","port")
     config.user =       cfg.get("simpycity","user")
     config.host =       cfg.get("simpycity","host")
     config.password =   cfg.get("simpycity","password")
     config.debug = True
-    
+
+    # clean up state
+    h = open("test/sql/test_unload.sql","r")
+    destroy_sql = h.read()
+    h.close()
+
+    global handle
+    handle = Handle(config=config)
+    try:    
+        handle.cursor().execute(destroy_sql)
+    except psycopg2.ProgrammingError:
+        pass
+    handle.commit()
+
+
 class dbTest(unittest.TestCase):
     
     def setUp(self):
-        
-        self.conn = psycopg2.connect("dbname=%s user=%s password=%s port=%s host=%s" %
-
-            (
-                config.database,
-                config.user,
-                config.password,
-                config.port,
-                config.host
-            )
-        )
         h = open("test/sql/test.sql","r")
         create_sql = h.read()
         h.close()
-        cur = self.conn.cursor()
-        cur.execute(create_sql)
-        self.conn.commit()
-        
+
+        global handle
+        handle.cursor().execute(create_sql)
+        handle.commit()
+        handle.close()
+    
     def tearDown(self):
+        global handle
+
+        handle.rollback()
+        handle.close()
+
         h = open("test/sql/test_unload.sql","r")
         destroy_sql = h.read()
         h.close()
-        cur = self.conn.cursor()
-        cur.execute(destroy_sql)
-        self.conn.commit()
-        self.conn.close()
-        
+
+        handle.cursor().execute(destroy_sql)
+        handle.commit()
+        handle.close()
+
+
+def with_global_handle(kwargs):
+    global handle
+    kwargs['handle'] = handle
+    return kwargs
+
+def Function(*args, **kwargs):
+    return BaseFunction(*args, **with_global_handle(kwargs))
+
+def Query(*args, **kwargs):
+    return BaseQuery(*args, **with_global_handle(kwargs))
+
+def Raw(*args, **kwargs):
+    return BaseRaw(*args, **with_global_handle(kwargs))
+
+
 class ConstructTest(dbTest):
     
     def testConstructFunction(self):
@@ -69,8 +92,7 @@ class ConstructTest(dbTest):
             'TypedResultSet' in [x.__name__ for x in type(rs).mro()],
             "Construct function doers not return expected result set."
         )
-        instance.rollback()
-        instance.close()
+
     def testCreateConstruct(self):
         
         class o(Construct):
@@ -81,8 +103,6 @@ class ConstructTest(dbTest):
             'Construct' in [x.__name__ for x in type(instance).mro()],
             "Construct not created successfully."
         )
-        instance.rollback()
-        instance.close()
         
 class ModelTest(dbTest):
     
@@ -106,14 +126,14 @@ class ModelTest(dbTest):
         q = SimpleLoaderModel(id=1)
         q.commit()
         self.assertEqual(
-            q.col['id'],
+            q.id,
             1,
             "Model id is set to 1."
         )
         self.assertEqual(
-            q.col['value'],
+            q.value,
             "one",
-            "Model value is not 'Test row', got %s" % q.col['value']
+            "Model value is not 'Test row', got %s" % q.value
         )
         # So the model is set up correctly..
         
@@ -128,14 +148,12 @@ class ModelTest(dbTest):
             self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
             f = SimpleUpdateModel(id=1)
             self.assertEqual(
-                f.col['value'],
+                f.value,
                 "Instance function test", 
                 "Key was not successfully set, got '%s', expected '%s'" % (
-                    f.col['value'], 
+                    f.value, 
                     "Instance function test" )  
                 )
-            
-            
         except Exception, e:
             self.fail("Exception %s during test." % e)
         
@@ -214,7 +232,6 @@ class QueryTest(dbTest):
         try:
             rs = q(1)
         except Exception, e:
-            q.rollback()
             self.fail("Failed with exception %s" % e)
             
         self.assertEqual(len(rs),1,"ResultSet has a single entry")
@@ -230,7 +247,6 @@ class QueryTest(dbTest):
             rs = q(1)
             
         except Exception, e:
-            q.rollback()
             self.fail("Failed with exception %s" % e)
         rs.commit()
         for row in rs:
@@ -244,7 +260,6 @@ class QueryTest(dbTest):
         try:
             rs = q(options=(dict(columns=['id'])))
         except Exception, e:
-            q.rollback()
             self.fail("Failed with exception %s" % e)
             
         self.assertEqual(len(rs),3,"Partial Result Set has 3 entries, as expected.")
@@ -269,7 +284,6 @@ class QueryTest(dbTest):
                 pass
             except Exception, e:
                 self.fail("Failed with exception: %s" %e)
-                f.rollback()
     
 class RawTest(dbTest):
     
@@ -287,6 +301,19 @@ class RawTest(dbTest):
         rs.commit()
         self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
         self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
+
+
+class Construct(BaseConstruct):
+    def __init__(self, *args, **kwargs):
+        global handle
+        kwargs['handle'] = handle
+        super(Construct, self).__init__(*args, **kwargs)
+
+class SimpleModel(BaseSimpleModel):
+    def __init__(self, *args, **kwargs):
+        global handle
+        kwargs['handle'] = handle
+        super(SimpleModel, self).__init__(*args, **kwargs)
 
 class SimpleReturn(SimpleModel):
     

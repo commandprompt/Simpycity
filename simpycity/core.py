@@ -163,33 +163,13 @@ class meta_query(object):
                 opts = in_kwargs['opt']
                 d_out("meta_query.__call__: Found opt=")
                 del(keyargs['opt'])
-
-            try:
-                columns = opts['columns']
-            except KeyError:
-                columns=[]
-
-            try:
-                handle = opts['handle']
-                d_out("meta_query.__call__: Found handle.")
-            except KeyError:
-                d_out("meta_query.__call__: Couldn't set handle.")
-                handle = None
-
-            try:
-                if 'reduce' in opts:
-                    condense = opts['reduce']
-                    d_out("meta_query.__call__: found reduce")
-                else:
-                    condense=True
-            except KeyError:
-                condense=None
-
-
         else:
-            columns = [] # an empty set.
-            handle = None
-            condense=None
+            opts = {}
+
+        columns = opts.get('columns', [])
+        handle = opts.get('handle', None)
+        condense = opts.get('reduce', False)
+
 
         if len(columns) >= 1:
             # we are limiting the return type.
