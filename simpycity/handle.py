@@ -18,12 +18,14 @@ class Handle(object):
     a Handle is the wrapper object around a
     """
 
-    def __init__(self,dsn=None,isolation_level=None):
+    def __init__(self, dsn=None, config=None, isolation_level=None):
 
         self.conn = None
-        self.dsn = dsn
 
-        self.config = g_config
+        self.config = config or g_config
+        self.dsn = dsn or ("host=%s port=%s dbname=%s user=%s password=%s" %
+                           (self.config.host, self.config.port, self.config.database,
+                            self.config.user, self.config.password))
 
         self.isolation_level = None
         if isolation_level is not None and isolation_level in [0,1,2]:
@@ -37,15 +39,6 @@ class Handle(object):
             self.conn.set_isolation_level(isolation_level)
 
     def __reconnect__(self):
-
-        if not self.dsn:
-            self.dsn = "host=%s port=%s dbname=%s user=%s password=%s" % (
-                    self.config.host,
-                    self.config.port,
-                    self.config.database,
-                    self.config.user,
-                    self.config.password
-            )
         self.conn = psycopg2.connect(self.dsn)
 
     def cursor(self,*args,**kwargs):
@@ -93,7 +86,7 @@ class Handle(object):
 
     def __del__(self):
         d_out("Handle.__del__: destroying handle, de-allocating connection")
-        if not self.conn.closed:
+        if self.conn and not self.conn.closed:
             self.close()
             
     @property
