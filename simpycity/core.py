@@ -169,6 +169,7 @@ class meta_query(object):
         columns = opts.get('columns', [])
         handle = opts.get('handle', None)
         condense = opts.get('reduce', False)
+        ret_type = opts.get('return_type', self.return_type)
 
 
         if len(columns) >= 1:
@@ -228,7 +229,7 @@ class meta_query(object):
             for index,arg in enumerate(in_args):
                 call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
-        return self.__execute__(cols, call_list, handle, condense)
+        return self.__execute__(cols, call_list, handle, condense, ret_type)
 
 
     def form_query(self, columns):
@@ -249,7 +250,7 @@ class meta_query(object):
 
 #    @exceptions.system
 #    @exceptions.base
-    def __execute__(self, columns, call_list, handle=None, condense=False):
+    def __execute__(self, columns, call_list, handle=None, condense=False, ret_type=None):
 
         '''
         Runs the stored query based on the arguments provided to
@@ -279,7 +280,7 @@ class meta_query(object):
 
         rs = cursor.execute(query, call_list)
 
-        rs = TypedResultSet(cursor,self.return_type,callback=self.callback)
+        rs = TypedResultSet(cursor,ret_type,callback=self.callback)
         rs.statement = query
         rs.call_list = call_list
         rs.conn = handle
@@ -297,7 +298,7 @@ class meta_query(object):
 
                 if self.returns == "list":
 
-                    if self.return_type:
+                    if ret_type:
                         return [item]
                     elif len(item) == 1:
                         return [item[0]]
@@ -306,7 +307,7 @@ class meta_query(object):
 
                 elif self.returns == "single":
 
-                    if self.return_type:
+                    if ret_type:
                         return item
                     elif len(item) == 1:
                         # It's a list of columns, with one entry.
@@ -319,7 +320,7 @@ class meta_query(object):
                 # It's larger than a single row.
                 items = rs.fetchall()
                 if len(items) >= 1:
-                    if self.return_type:
+                    if ret_type:
                         return items
                     elif len(items[0]) == 1:
                         return [x[0] for x in items]
