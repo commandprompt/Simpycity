@@ -43,21 +43,11 @@ class Handle(object):
 
     def cursor(self,*args,**kwargs):
         d_out("Handle.cursor: Creating cursor..")
-        if self.open:
-            kwargs["cursor_factory"] = extras.DictCursor
+        if not self.open:
+            raise Exception("Connection isn't open.")
 
-            cur = self.conn.cursor(*args,**kwargs)
-            # Test for liveliness.
-            try:
-                cur.execute("SELECT 1;")
-            except psycopg2.DatabaseError:
-                # DB has died.
-                self.conn = None
-                self.__reconnect__()
-                cur = self.conn.cursor(*args,**kwargs)
-            return cur
-        else:
-            d_out("not open. Buh?")
+        kwargs["cursor_factory"] = extras.DictCursor
+        return self.conn.cursor(*args,**kwargs)
 
     def commit(self):
         d_out("Handle.commit: Committing transactions.")

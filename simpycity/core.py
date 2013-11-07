@@ -13,8 +13,9 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-#import psycopg2
+import psycopg2.errorcodes
 #from psycopg2 import extras
+
 import re
 
 import config
@@ -278,7 +279,14 @@ class meta_query(object):
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
 
 
-        rs = cursor.execute(query, call_list)
+        try:
+            rs = cursor.execute(query, call_list)
+        except OperationalError as e:
+            if e.pgcode == errorcodes.CONNECTION_EXCEPTION:
+                # retry query on stale connection error
+                rs = cursor.execute(query, call_list)
+            else:
+                raise
 
         rs = TypedResultSet(cursor,ret_type,callback=self.callback)
         rs.statement = query
