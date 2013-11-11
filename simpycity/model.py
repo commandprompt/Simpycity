@@ -137,18 +137,21 @@ class SimpleModel(Construct):
             handle = None
 
         if args or kwargs:
-            try:
-                d_out("SimpleModel.__init__: Got args of %s" % args)
-            except TypeError:
-                pass
-            d_out("SimpleModel.__init__: Got kwargs of %s" % kwargs)
+            d_out("SimpleModel.__init__: Got args of %s" % str(args))
+            d_out("SimpleModel.__init__: Got kwargs of %s" % str(kwargs))
 
         # should automatically pick up config= and handle=
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
 
         # config and handle have been dealt with, now.
         if args or kwargs:
-            if hasattr(self, '__load__'):
+            if hasattr(self, '__lazyload__'):
+                self.__lazyargs__ = args
+                self.__lazykwargs__ = kwargs
+                d_out("__lazyargs__: %s" % str(self.__lazyargs__))
+                d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
+
+            elif hasattr(self, '__load__'):
                 self.__load_by_key__(*args, **kwargs)
 
     def __load_by_key__(self, *args, **kwargs):
@@ -173,7 +176,10 @@ class SimpleModel(Construct):
 
         rs = None
         try:
-            rs = self.__load__(*args, **kwargs)
+            if hasattr(self, '__lazyload__'):
+                rs = self.__lazyload__(*args, **kwargs)
+            else:
+                rs = self.__load__(*args, **kwargs)
         except psycopg2.InternalError, e:
             d_out("pgerror=%s pgcode=%s diag=%s" % (e.pgerror, e.pgcode, e.diag))
             if not (e.pgcode == 'P0002'): # no_data_found
@@ -224,8 +230,8 @@ class SimpleModel(Construct):
             #d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
 
-        if name == '__load__':
-
+        if name in ['__load__', '__lazyload__']:
+            d_out("skipping: %s" % name)
             return attr
 
         if "meta_query" in mro:
@@ -322,6 +328,23 @@ class SimpleModel(Construct):
 
         if name in self.__dict__:
             return self.__dict__[name]
+
+        # OK, since we got here, check if it's a first-time access to
+        # a table attr in a lazy-load model
+        try:
+            tbl = object.__getattribute__(self, 'table')
+        except AttributeError:
+            tbl = None
+
+        if tbl and name in tbl:
+            ll = object.__getattribute__(self, '__lazyload__')
+            la = object.__getattribute__(self, '__lazyargs__')
+            lk = object.__getattribute__(self, '__lazykwargs__')
+            if ll and (la or lk):
+                self.__lazyargs__ = None
+                self.__lazykwargs__ = None
+                object.__getattribute__(self, '__load_by_key__')(*la, **lk)
+                return self.__getattr__(name)
 
         attr = object.__getattribute__(self, name) # Use the topmost parent version
         return attr
