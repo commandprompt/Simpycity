@@ -14,7 +14,7 @@
 """
 
 import psycopg2
-import psycopg2.errorcodes
+from psycopg2.errorcodes import *
 #from psycopg2 import extras
 
 import re
@@ -285,7 +285,7 @@ class meta_query(object):
         try:
             rs = cursor.execute(query, call_list)
         except psycopg2.OperationalError as e:
-            if e.pgcode == errorcodes.CONNECTION_EXCEPTION:
+            if e.pgcode == CONNECTION_EXCEPTION:
                 # retry query on stale connection error
                 rs = cursor.execute(query, call_list)
             else:
