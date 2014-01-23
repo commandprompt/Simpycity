@@ -294,7 +294,7 @@ class meta_query(object):
         rs = TypedResultSet(cursor,ret_type,callback=self.callback)
         rs.statement = query
         rs.call_list = call_list
-        rs.conn = handle
+        rs.handle = handle
 
         d_out("meta_query.__execute__: Checking for condense..")
         if condense:
@@ -399,6 +399,7 @@ class SimpleResultSet(object):
 
     def __init__(self, cursor,*args,**kwargs):
         self.cursor = cursor
+
     def __iter__(self):
         row = self.cursor.fetchone()
         while row:
@@ -406,23 +407,31 @@ class SimpleResultSet(object):
             row = self.cursor.fetchone()
             if row is None:
                 raise StopIteration()
+
     def __len__(self):
         if self.cursor is not None:
             return self.cursor.rowcount
         else:
             return 0
+
     def next(self):
-        return self.wrapper(self.cursor.fetchone())
+        return self.fetchone()
+
     def fetchone(self):
         return self.wrapper(self.cursor.fetchone())
+
     def fetchall(self):
         return [self.wrapper(x) for x in self.cursor.fetchall()]
+
     def commit(self):
-        return self.conn.commit()
+        return self.handle.commit()
+
     def rollback(self):
-        return self.conn.rollback()
+        return self.handle.rollback()
+
     def wrapper(self,item):
         return item
+
     def __getitem__(self, key):
 
         """Gets the specified index key. This has the slight problem of
@@ -438,9 +447,11 @@ class SimpleResultSet(object):
         if self.__store__ is not None:
             self.__store__ = self.cursor.fetchall()
         return self.__store__[key]
+
     def __setitem__(self, *args, **kwargs):
 
         raise AttributeError("Cannot set resultset values.")
+
 
 class TypedResultSet(SimpleResultSet):
 
@@ -461,7 +472,7 @@ class TypedResultSet(SimpleResultSet):
     def wrapper(self,item):
         if self.type is None:
             return item
-        i = self.type(handle=self.conn)
+        i = self.type(handle=self.handle)
         for col in item.keys():
             setattr(i, col, item[col])
         if self.callback:
