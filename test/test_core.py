@@ -30,13 +30,12 @@ def setUpModule():
     h.close()
 
     global handle
-    handle = Handle(config=config)
-    try:    
-        handle.cursor().execute(destroy_sql)
-    except psycopg2.ProgrammingError:
-        pass
-    handle.commit()
-
+    handle = Handle(config=config) #, isolation_level=0)
+    with handle.transaction():
+        try:
+            handle.execute(destroy_sql)
+        except psycopg2.ProgrammingError:
+            pass
 
 class dbTest(unittest.TestCase):
     
@@ -46,23 +45,23 @@ class dbTest(unittest.TestCase):
         h.close()
 
         global handle
-        handle.cursor().execute(create_sql)
+        with handle.transaction():
+            handle.execute(create_sql)
         handle.commit()
-        handle.close()
+
     
     def tearDown(self):
         global handle
 
         handle.rollback()
-        handle.close()
+        #handle.close()
 
         h = open("test/sql/test_unload.sql","r")
         destroy_sql = h.read()
         h.close()
 
-        handle.cursor().execute(destroy_sql)
-        handle.commit()
-        handle.close()
+        with handle.transaction():
+            handle.execute(destroy_sql)
 
 
 def with_global_handle(kwargs):

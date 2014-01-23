@@ -2,6 +2,7 @@ import psycopg2
 from psycopg2 import extras
 from simpycity import config as g_config
 import weakref
+from contextlib import contextmanager
 
 import simpycity
 
@@ -49,14 +50,62 @@ class Handle(object):
         kwargs["cursor_factory"] = extras.DictCursor
         return self.conn.cursor(*args,**kwargs)
 
+    def execute(self, *args, **kwargs):
+        return self.cursor().execute(*args, **kwargs)
+
+    @property
+    def autocommit(self):
+        # We trust the user not to run SQL SET commands directly to
+        # alter the value of default_transaction_isolation setting.
+        return self.isolation_level == psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT
+
+    def begin(self):
+        d_out("Handle.begin: Begin transaction.")
+
+        if not self.open:
+            raise Exception("Connection isn't open.")
+
+        if self.autocommit:
+            # In non-autocommit mode, the first statement executed on
+            # cursor is prepended with BEGIN automatically by
+            # psycopg2.  We only need to run it in autocommit mode.
+            self.execute("BEGIN")
+
     def commit(self):
-        d_out("Handle.commit: Committing transactions.")
+        d_out("Handle.commit: Commit transaction.")
 
         if self.conn.closed:
             # That's weird, and bad.
             raise Exception("Attempting to commit a closed handle.")
 
-        return self.conn.commit()
+        if self.autocommit:
+            # Connection object's commit/rollback() funcs has no
+            # effect in autocommit mode.  Run direct SQL statement
+            # through the default cursor.
+            self.execute("COMMIT")
+        else:
+            self.conn.commit()
+
+    def rollback(self):
+        d_out("Handle.rollback: Abort transaction.")
+
+        if not self.conn.closed:
+
+            if self.autocommit:
+                # See commit()
+                self.execute("ROLLBACK")
+            else:
+                self.conn.rollback()
+
+    @contextmanager
+    def transaction(self):
+        try:
+            self.begin()
+            yield
+            self.commit()
+        except:
+            self.rollback()
+            raise
 
     def __repr__(self):
         if not self.conn.closed:
@@ -72,14 +121,9 @@ class Handle(object):
         else:
             d_out("handle.close: handle already closed.")
 
-    def rollback(self):
-
-        if not self.conn.closed:
-            self.conn.rollback()
-
     def __del__(self):
         d_out("Handle.__del__: destroying handle, de-allocating connection")
-        if self.conn and not self.conn.closed:
+        if self.conn:
             self.close()
             
     @property
