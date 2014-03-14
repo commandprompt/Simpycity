@@ -1,5 +1,6 @@
 from simpycity import NotFoundError
 from simpycity.core import Function, FunctionError, ProceduralException, Raw, Query
+from simpycity.handle import Handle
 from simpycity import config as g_config
 import psycopg2
 
@@ -10,6 +11,7 @@ def d_out(text):
 
 class Construct(object):
     config = None
+    handle = None
 
     def __init__(self, config=None, handle=None, *args,**kwargs):
         """
@@ -23,25 +25,17 @@ class Construct(object):
         if not self.config:
             self.config = config or g_config
 
-        self.init_handle = handle
+        if not self.handle:
+            self.handle = handle or Handle(config=self.config)
 
-
-    @property
-    def handle(self):
-        if not self.init_handle:
-            self.init_handle = self.config.handle_factory(config=self.config)
-
-        return self.init_handle
 
     def commit(self):
         if self.handle is not None:
             self.handle.commit()
         else:
             raise AttributeError("Cannot call commit without localized handle.")
-
     def close(self):
-        if self.init_handle:
-            self.init_handle.close()
+        self.handle.close()
 
     def rollback(self):
         if self.handle is not None:
@@ -150,15 +144,15 @@ class SimpleModel(Construct):
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
 
         # config and handle have been dealt with, now.
-        if hasattr(self, '__lazyload__'):
-            self.__lazyargs__ = args
-            self.__lazykwargs__ = kwargs
-            d_out("__lazyargs__: %s" % str(self.__lazyargs__))
-            d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
+        if args or kwargs:
+            if hasattr(self, '__lazyload__'):
+                self.__lazyargs__ = args
+                self.__lazykwargs__ = kwargs
+                d_out("__lazyargs__: %s" % str(self.__lazyargs__))
+                d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
 
-        elif hasattr(self, '__load__'):
-            self.__load_by_key__(*args, **kwargs)
-
+            elif hasattr(self, '__load__'):
+                self.__load_by_key__(*args, **kwargs)
 
     def __load_by_key__(self, *args, **kwargs):
         """
@@ -168,7 +162,6 @@ class SimpleModel(Construct):
         """
         # check for an __load__ function
 
-        #opts = kwargs.pop('options', {})
         if 'options' in kwargs:
             opts = kwargs['options']
             del(kwargs['options'])
@@ -193,8 +186,7 @@ class SimpleModel(Construct):
                 raise # as InternalError
 
         if rs is None:
-            return
-#            raise NotFoundError("Record not found in __load__ (%s)" % self.__class__)
+            raise NotFoundError("Record not found in __load__ (%s)" % self.__class__)
 
         d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
         try:
@@ -344,15 +336,11 @@ class SimpleModel(Construct):
         except AttributeError:
             tbl = None
 
-        d_out('__getattr__: name="%s"' % name)
         if tbl and name in tbl:
-            d_out('__getattr__: in tbl')
             ll = object.__getattribute__(self, '__lazyload__')
             la = object.__getattribute__(self, '__lazyargs__')
             lk = object.__getattribute__(self, '__lazykwargs__')
-            if ll and (la is not None or lk is not None):
-                d_out('__getattr__: has lazyload')
-                # reset lazy args, so we only load it once
+            if ll and (la or lk):
                 self.__lazyargs__ = None
                 self.__lazykwargs__ = None
                 object.__getattribute__(self, '__load_by_key__')(*la, **lk)

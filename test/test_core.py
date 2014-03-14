@@ -1,26 +1,15 @@
 import unittest
 from simpycity import config
-from simpycity.core import Function, Query, Raw
-from simpycity.model import SimpleModel, Construct
+from simpycity.core import Function as BaseFunction, Query as BaseQuery, Raw as BaseRaw
+from simpycity.model import SimpleModel as BaseSimpleModel, Construct as BaseConstruct
+from simpycity.handle import Handle
 import psycopg2
-import psycopg2.pool
 from optparse import OptionParser
 import sys
 
 import ConfigParser
 
 handle = None
-
-def test_handle_factory(*args, **kwargs):
-    print("test_handle_factory")
-
-    global handle
-    if not handle:
-        from simpycity.handle import Handle
-        handle = Handle(*args, **kwargs)
-
-    return handle
-
 
 def setUpModule():
     
@@ -35,14 +24,13 @@ def setUpModule():
     config.password =   cfg.get("simpycity","password")
     config.debug = True
 
-    config.handle_factory = test_handle_factory
-
     # clean up state
     h = open("test/sql/test_unload.sql","r")
     destroy_sql = h.read()
     h.close()
 
-    handle = config.handle_factory() #, isolation_level=0)
+    global handle
+    handle = Handle(config=config) #, isolation_level=0)
     with handle.transaction():
         try:
             handle.execute(destroy_sql)
@@ -56,14 +44,15 @@ class dbTest(unittest.TestCase):
         create_sql = h.read()
         h.close()
 
-        handle = config.handle_factory()
+        global handle
         with handle.transaction():
             handle.execute(create_sql)
         handle.commit()
 
     
     def tearDown(self):
-        handle = config.handle_factory()
+        global handle
+
         handle.rollback()
         #handle.close()
 
@@ -73,6 +62,21 @@ class dbTest(unittest.TestCase):
 
         with handle.transaction():
             handle.execute(destroy_sql)
+
+
+def with_global_handle(kwargs):
+    global handle
+    kwargs['handle'] = handle
+    return kwargs
+
+def Function(*args, **kwargs):
+    return BaseFunction(*args, **with_global_handle(kwargs))
+
+def Query(*args, **kwargs):
+    return BaseQuery(*args, **with_global_handle(kwargs))
+
+def Raw(*args, **kwargs):
+    return BaseRaw(*args, **with_global_handle(kwargs))
 
 
 class ConstructTest(dbTest):
@@ -312,6 +316,17 @@ class RawTest(dbTest):
         self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
 
 
+class Construct(BaseConstruct):
+    def __init__(self, *args, **kwargs):
+        global handle
+        kwargs['handle'] = handle
+        super(Construct, self).__init__(*args, **kwargs)
+
+class SimpleModel(BaseSimpleModel):
+    def __init__(self, *args, **kwargs):
+        global handle
+        kwargs['handle'] = handle
+        super(SimpleModel, self).__init__(*args, **kwargs)
 
 class SimpleReturn(SimpleModel):
     
