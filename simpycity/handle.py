@@ -38,6 +38,9 @@ class Handle(object):
             self.conn.set_isolation_level(isolation_level)
 
     def __reconnect__(self):
+        if self.conn and not self.conn.closed:
+            self.close()
+
         self.conn = psycopg2.connect(self.dsn)
 
     def cursor(self,*args,**kwargs):
@@ -113,6 +116,10 @@ class Handle(object):
 
     def close(self,*args,**kwargs):
         d_out("Handle.close: de-allocating connection" )
+
+        if self.conn is None:
+            return
+
         if not self.conn.closed:
             d_out("handle.close: handle open, closing pid %s" % self.conn.get_backend_pid() )
             self.conn.close()
