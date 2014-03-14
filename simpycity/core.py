@@ -284,12 +284,13 @@ class meta_query(object):
 
         try:
             rs = cursor.execute(query, call_list)
+
         except psycopg2.OperationalError as e:
-            if e.pgcode == CONNECTION_EXCEPTION:
-                # retry query on stale connection error
-                rs = cursor.execute(query, call_list)
-            else:
-                raise
+            # retry query on stale connection error
+            d_out("OperationalError: %s" % e)
+
+            cursor = handle.cursor()
+            rs = cursor.execute(query, call_list)
 
         rs = TypedResultSet(cursor,ret_type,callback=self.callback)
         rs.statement = query
