@@ -19,27 +19,33 @@ class Handle(object):
     a Handle is the wrapper object around a
     """
 
-    def __init__(self, dsn=None, config=None, isolation_level=None):
+    def __init__(self, conn=None, dsn=None, config=None, isolation_level=None):
 
-        self.conn = None
+        print("Handle: isolation_level=%s" % isolation_level)
+
+        self.conn = conn or None
 
         self.config = config or g_config
-        self.dsn = dsn or ("host=%s port=%s dbname=%s user=%s password=%s" %
-                           (self.config.host, self.config.port, self.config.database,
-                            self.config.user, self.config.password))
+        self.dsn = dsn or self.config.dsn()
 
         self.isolation_level = None
         if isolation_level is not None and isolation_level in [0,1,2]:
             self.isolation_level = isolation_level
 
-        d_out("Handle.__init__: Creating DB connection")
-        self.__reconnect__()
+        if not self.conn:
+            d_out("Handle.__init__: Creating DB connection")
+            self.__reconnect__()
+
+            if self.isolation_level is not None:
+                self.conn.set_isolation_level(isolation_level)
+
         d_out("Handle.__init__: Connection PID is %s" % self.conn.get_backend_pid() )
 
-        if self.isolation_level is not None:
-            self.conn.set_isolation_level(isolation_level)
 
     def __reconnect__(self):
+        if self.conn and not self.conn.closed:
+            self.close()
+
         self.conn = psycopg2.connect(self.dsn)
 
     def cursor(self,*args,**kwargs):
@@ -115,6 +121,10 @@ class Handle(object):
 
     def close(self,*args,**kwargs):
         d_out("Handle.close: de-allocating connection" )
+
+        if self.conn is None:
+            return
+
         if not self.conn.closed:
             d_out("handle.close: handle open, closing pid %s" % self.conn.get_backend_pid() )
             self.conn.close()
@@ -122,6 +132,7 @@ class Handle(object):
             d_out("handle.close: handle already closed.")
 
     def __del__(self):
+
         d_out("Handle.__del__: destroying handle, de-allocating connection")
         if self.conn:
             self.close()
