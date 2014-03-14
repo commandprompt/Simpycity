@@ -10,7 +10,6 @@ def d_out(text):
 
 class Construct(object):
     config = None
-    handle = None
 
     def __init__(self, config=None, handle=None, *args,**kwargs):
         """
@@ -24,17 +23,25 @@ class Construct(object):
         if not self.config:
             self.config = config or g_config
 
-        if not self.handle:
-            self.handle = handle or self.config.handle_factory(config=self.config)
+        self.init_handle = handle
 
+
+    @property
+    def handle(self):
+        if not self.init_handle:
+            self.init_handle = self.config.handle_factory(config=self.config)
+
+        return self.init_handle
 
     def commit(self):
         if self.handle is not None:
             self.handle.commit()
         else:
             raise AttributeError("Cannot call commit without localized handle.")
+
     def close(self):
-        self.handle.close()
+        if self.init_handle:
+            self.init_handle.close()
 
     def rollback(self):
         if self.handle is not None:
