@@ -24,9 +24,7 @@ class Handle(object):
         self.conn = None
 
         self.config = config or g_config
-        self.dsn = dsn or ("host=%s port=%s dbname=%s user=%s password=%s" %
-                           (self.config.host, self.config.port, self.config.database,
-                            self.config.user, self.config.password))
+        self.dsn = dsn or self.config.dsn()
 
         self.isolation_level = None
         if isolation_level is not None and isolation_level in [0,1,2]:
