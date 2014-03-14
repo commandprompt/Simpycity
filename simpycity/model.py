@@ -1,6 +1,5 @@
 from simpycity import NotFoundError
 from simpycity.core import Function, FunctionError, ProceduralException, Raw, Query
-from simpycity.handle import Handle
 from simpycity import config as g_config
 import psycopg2
 
@@ -26,7 +25,7 @@ class Construct(object):
             self.config = config or g_config
 
         if not self.handle:
-            self.handle = handle or Handle(config=self.config)
+            self.handle = handle or self.config.handle_factory(config=self.config)
 
 
     def commit(self):
