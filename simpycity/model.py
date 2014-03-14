@@ -150,15 +150,15 @@ class SimpleModel(Construct):
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
 
         # config and handle have been dealt with, now.
-        if args or kwargs:
-            if hasattr(self, '__lazyload__'):
-                self.__lazyargs__ = args
-                self.__lazykwargs__ = kwargs
-                d_out("__lazyargs__: %s" % str(self.__lazyargs__))
-                d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
+        if hasattr(self, '__lazyload__'):
+            self.__lazyargs__ = args
+            self.__lazykwargs__ = kwargs
+            d_out("__lazyargs__: %s" % str(self.__lazyargs__))
+            d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
 
-            elif hasattr(self, '__load__'):
-                self.__load_by_key__(*args, **kwargs)
+        elif hasattr(self, '__load__'):
+            self.__load_by_key__(*args, **kwargs)
+
 
     def __load_by_key__(self, *args, **kwargs):
         """
@@ -192,7 +192,7 @@ class SimpleModel(Construct):
                 raise # as InternalError
 
         if rs is None:
-            raise NotFoundError("Record not found in __load__ (%s)" % self.__class__)
+            return
 
         d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
         try:
@@ -346,7 +346,9 @@ class SimpleModel(Construct):
             ll = object.__getattribute__(self, '__lazyload__')
             la = object.__getattribute__(self, '__lazyargs__')
             lk = object.__getattribute__(self, '__lazykwargs__')
-            if ll and (la or lk):
+            if ll and (la is not None or lk is not None):
+                d_out('__getattr__: has lazyload')
+                # reset lazy args, so we only load it once
                 self.__lazyargs__ = None
                 self.__lazykwargs__ = None
                 object.__getattribute__(self, '__load_by_key__')(*la, **lk)
