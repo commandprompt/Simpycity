@@ -157,7 +157,9 @@ class SimpleModel(Construct):
             d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
 
         elif hasattr(self, '__load__'):
-            self.__load_by_key__(*args, **kwargs)
+
+            if args or kwargs:
+                self.__load_by_key__(*args, **kwargs)
 
 
     def __load_by_key__(self, *args, **kwargs):
@@ -192,7 +194,7 @@ class SimpleModel(Construct):
                 raise # as InternalError
 
         if rs is None:
-            return
+            raise NotFoundError()
 
         d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
         try:
@@ -342,7 +344,7 @@ class SimpleModel(Construct):
         except AttributeError:
             tbl = None
 
-        if tbl and name in tbl:
+        if tbl and name in tbl and hasattr(self, '__lazyload__'):
             ll = object.__getattribute__(self, '__lazyload__')
             la = object.__getattribute__(self, '__lazyargs__')
             lk = object.__getattribute__(self, '__lazykwargs__')
