@@ -143,8 +143,8 @@ class SimpleModel(Construct):
             handle = None
 
         if args or kwargs:
-            d_out("SimpleModel.__init__: Got args of %s" % str(args))
-            d_out("SimpleModel.__init__: Got kwargs of %s" % str(kwargs))
+            d_out("SimpleModel.__init__: Got args of %s" % repr(args))
+            d_out("SimpleModel.__init__: Got kwargs of %s" % repr(kwargs))
 
         # should automatically pick up config= and handle=
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
@@ -153,8 +153,8 @@ class SimpleModel(Construct):
         if hasattr(self, '__lazyload__'):
             self.__lazyargs__ = args
             self.__lazykwargs__ = kwargs
-            d_out("__lazyargs__: %s" % str(self.__lazyargs__))
-            d_out("__lazykwargs__: %s" % str(self.__lazykwargs__))
+            d_out("__lazyargs__: %s" % repr(self.__lazyargs__))
+            d_out("__lazykwargs__: %s" % repr(self.__lazykwargs__))
 
         elif hasattr(self, '__load__'):
 
@@ -200,7 +200,7 @@ class SimpleModel(Construct):
         try:
             # TODO: why list them explicitly in the table attribute?
             for item in self.table:
-                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, str(rs[item])))
+                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(rs[item])))
                 self.__dict__[item] = rs[item]
             d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
         except TypeError, e:
