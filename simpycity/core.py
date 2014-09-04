@@ -22,7 +22,7 @@ import re
 import config
 from handle import Handle
 
-from simpycity import InternalError
+from simpycity import InternalError, ProgrammingError
 
 #from simpycity import exceptions
 
@@ -88,6 +88,10 @@ class meta_query(object):
                         queries can be declared to exist as always expecting
                         the return of a list. In these cases, it is most sane
                         to allow a simple flag to say "I expect a list.".
+
+           callback=  A callable to call on every fetched record.  Can
+                      be overriden on call-to-call basis via options= of the
+                      __call__ methond.
 
         """
 
@@ -172,7 +176,7 @@ class meta_query(object):
         handle = opts.get('handle', None)
         condense = opts.get('reduce', False)
         ret_type = opts.get('return_type', self.return_type)
-
+        callback = opts.get('callback', self.callback)
 
         if len(columns) >= 1:
             # we are limiting the return type.
@@ -233,7 +237,7 @@ class meta_query(object):
             for index,arg in enumerate(in_args):
                 call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
-        return self.__execute__(cols, call_list, handle, condense, ret_type)
+        return self.__execute__(cols, call_list, handle, condense, ret_type, callback)
 
 
     def form_query(self, columns):
@@ -254,7 +258,7 @@ class meta_query(object):
 
 #    @exceptions.system
 #    @exceptions.base
-    def __execute__(self, columns, call_list, handle=None, condense=False, ret_type=None):
+    def __execute__(self, columns, call_list, handle=None, condense=False, ret_type=None, callback=None):
 
         '''
         Runs the stored query based on the arguments provided to
@@ -292,7 +296,7 @@ class meta_query(object):
             cursor = handle.cursor()
             rs = cursor.execute(query, call_list)
 
-        rs = TypedResultSet(cursor,ret_type,callback=self.callback)
+        rs = TypedResultSet(cursor,ret_type,callback=callback)
         rs.statement = query
         rs.call_list = call_list
         rs.handle = handle
@@ -366,15 +370,30 @@ class meta_query(object):
 
 class Function(meta_query):
 
+    def __init__(self, *args, **kwargs):
+        """
+        direct=  perform direct query "SELECT func(args...)" when True,
+                 vs. "SELECT * FROM func(args...)" when False (default.)
+        """
+        self.direct = kwargs.pop('direct', False)
+        super(Function, self).__init__(*args, **kwargs)
+
     def form_query(self, columns):
+
+        from_cl = 'FROM'
+        if self.direct:
+            if columns != '*':
+                raise ProgrammingError("Column lists cannot be specified for a direct function call.")
+            columns = ''
+            from_cl = ''
 
         if len(self.args) >= 1:
             replace = ['%s' for x in xrange(len(self.args))]
-            func = "FROM %s(" % self.query_base + ",".join(replace) + ")"
+            func = "%s(" % self.query_base + ",".join(replace) + ")"
         else:
-            func = "FROM %s()" % self.query_base
+            func = "%s()" % self.query_base
 
-        return "SELECT " + columns + " " + func
+        return "SELECT %s %s %s" % (columns, from_cl, func)
 
 
 class Raw(meta_query):
@@ -456,7 +475,7 @@ class SimpleResultSet(object):
 
 class TypedResultSet(SimpleResultSet):
 
-    def __init__(self,cursor,i_type,callback=None,*args,**kwargs):
+    def __init__(self,cursor,i_type,callback=None,**kwargs):
         self.cursor=cursor
         self.type=i_type
         self.callback=callback
@@ -471,13 +490,17 @@ class TypedResultSet(SimpleResultSet):
                 raise StopIteration()
 
     def wrapper(self,item):
+        o = self.wrap_item(item)
+        if self.callback:
+            self.callback(o)
+        return o
+
+    def wrap_item(self,item):
         if self.type is None:
             return item
         i = self.type(handle=self.handle)
         for col in item.keys():
             setattr(i, col, item[col])
-        if self.callback:
-            self.callback(i)
         return i
 
 class FunctionError(BaseException):
