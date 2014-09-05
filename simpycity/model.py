@@ -274,7 +274,11 @@ class SimpleModel(Construct):
                 rs = attr(*args, **my_args)
                 d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
                 return rs
-            return instance
+
+            if "Property" in mro:
+                return instance()
+            else:
+                return instance
 
         else:
             return attr

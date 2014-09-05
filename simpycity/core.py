@@ -395,6 +395,9 @@ class Function(meta_query):
 
         return "SELECT %s %s %s" % (columns, from_cl, func)
 
+# enjoys special handling in SimpleModel.__getattribute__
+class Property(Function):
+    pass
 
 class Raw(meta_query):
 
