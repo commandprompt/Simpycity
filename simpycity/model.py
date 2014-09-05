@@ -238,7 +238,7 @@ class SimpleModel(Construct):
             #d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
 
-        if name in ['__load__', '__lazyload__']:
+        if name == '__load__':
             d_out("skipping: %s" % name)
             return attr
 
@@ -250,16 +250,25 @@ class SimpleModel(Construct):
                 if args:
                     raise FunctionError("This function can only take keyword arguments.")
                 my_args = kwargs.copy()
+                d_out("SimpleModel.__getattribute__ InstanceMethod: kwargs: %s" % repr(kwargs))
                 for arg in attr.args:
                     d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
                     d_out("SimpleModel.__getattribute__: %s" % self.__dict__)
-                    if arg in self:
-                        d_out("SimpleModel.__getattribute__ InstanceMethod: found %s in col.." %arg)
-                        my_args[arg] = getattr(self, arg)
+                    if arg not in kwargs:
+                        d_out("not in my_args")
+                        if hasattr(self, arg):
+                            d_out("SimpleModel.__getattribute__ InstanceMethod: found %s in col.." % arg)
+                            my_args[arg] = getattr(self, arg)
+                        else:
+                            my_args[arg] = None
 
                 if 'options' not in kwargs:
                     d_out("SimpleModel.__getattribute__: Didn't find options. Setting handle.")
                     my_args['options'] = {}
+
+                # pass self to the query object
+                my_args['options']['model'] = self
+
                 d_out("SimpleModel.__getattribute__: Setting handle.")
                 my_args['options']['handle'] = self.handle
                 rs = attr(*args, **my_args)
@@ -344,15 +353,19 @@ class SimpleModel(Construct):
         except AttributeError:
             tbl = None
 
-        if tbl and name in tbl and hasattr(self, '__lazyload__'):
-            ll = object.__getattribute__(self, '__lazyload__')
+        if tbl and name in tbl \
+           and (hasattr(self, '__lazyargs__') or hasattr(self, '__lazykwargs__')):
+            d_out('__getattr__: has lazyload')
             la = object.__getattribute__(self, '__lazyargs__')
             lk = object.__getattribute__(self, '__lazykwargs__')
+
+            # drop lazy args, so we only load once
+            del(self.__lazyargs__)
+            del(self.__lazykwargs__)
+
+            ll = object.__getattribute__(self, '__lazyload__')
             if ll and (la is not None or lk is not None):
-                d_out('__getattr__: has lazyload')
-                # reset lazy args, so we only load it once
-                self.__lazyargs__ = None
-                self.__lazykwargs__ = None
+                d_out('__getattr__: lazy-calling __load_by_key__')
                 object.__getattribute__(self, '__load_by_key__')(*la, **lk)
                 return self.__getattr__(name)
 
