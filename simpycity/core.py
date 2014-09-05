@@ -344,7 +344,10 @@ class meta_query(object):
                         return items
                 else:
                     # There's nothing
-                    return None
+                    if self.returns == "list":
+                        return []
+                    else:
+                        return None
         else:
             d_out("meta_query.__execute__: condense not true, returning rs of %s" % rs)
             return rs
