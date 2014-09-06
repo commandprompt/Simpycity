@@ -152,31 +152,16 @@ class meta_query(object):
         self.call_list = []
 #        self.args = in_args
 
-        keyargs = in_kwargs
+        d_out("meta_query.__call__: Got args %s" % in_kwargs)
 
-        d_out("meta_query.__call__: Got args %s" % keyargs)
+        opts = in_kwargs.pop('options', {})
 
-        if 'options' in in_kwargs or 'opt' in in_kwargs:
-            d_out("meta_query.__call__: Found a set of options..")
-            if 'options' in in_kwargs:
-
-                opts = in_kwargs['options']
-                d_out("meta_query.__call__: Found options=")
-                del(keyargs['options'])
-
-            elif 'opt' in in_kwargs:
-
-                opts = in_kwargs['opt']
-                d_out("meta_query.__call__: Found opt=")
-                del(keyargs['opt'])
-        else:
-            opts = {}
-
-        columns = opts.get('columns', [])
-        handle = opts.get('handle', None)
-        condense = opts.get('reduce', False)
-        ret_type = opts.get('return_type', self.return_type)
-        callback = opts.get('callback', self.callback)
+        columns = opts.pop('columns', [])
+        handle = opts.pop('handle', None)
+        condense = opts.pop('reduce', False)
+        ret_type = opts.pop('return_type', self.return_type)
+        returns = opts.pop('returns_a', self.returns)
+        callback = opts.pop('callback', self.callback)
 
         if len(columns) >= 1:
             # we are limiting the return type.
@@ -191,10 +176,10 @@ class meta_query(object):
             cols = "*"
 
         d_out("meta_query.__call__: Requires args: %s" % len(self.args))
-        d_out("meta_query.__call__: Got args: %i" % (len(keyargs) + len(in_args)))
+        d_out("meta_query.__call__: Got args: %i" % (len(in_kwargs) + len(in_args)))
 
         d_out("in_args: %s" % str(in_args))
-        d_out("keyargs: %s" % str(keyargs))
+        d_out("in_kwargs: %s" % str(in_kwargs))
 
         # If we were called with arguments
         if in_args >= 1:
@@ -204,20 +189,20 @@ class meta_query(object):
             # instance was declared to require.
 
             if len(in_args) < len(self.args) \
-                and len(keyargs) < len(self.args) \
-                and len(keyargs) + len(in_args) < len(self.args):
+                and len(in_kwargs) < len(self.args) \
+                and len(in_kwargs) + len(in_args) < len(self.args):
                 raise Exception("Insufficient arguments: Expected %s, got %s"
-                                % (len(self.args), len(in_args)+len(keyargs)) )
+                                % (len(self.args), len(in_args)+len(in_kwargs)) )
 
             # Tests if the number of positional arguments + the number of
             # keyword arguments is GREATER than the number of arguments this
             # instance was declared to require.
 
             if len(in_args) > len(self.args) \
-                or len(keyargs) > len(self.args) \
-                or len(keyargs) + len(in_args) > len(self.args):
+                or len(in_kwargs) > len(self.args) \
+                or len(in_kwargs) + len(in_args) > len(self.args):
                 raise Exception("Too many arguments: Expected %s, got %s" %
-                                (len(self.args), len(in_args)+len(keyargs)))
+                                (len(self.args), len(in_args)+len(in_kwargs)))
 
             # Create a fixed-length array equal to the number of arguments
             # this instance requires.
@@ -228,19 +213,19 @@ class meta_query(object):
                 # Map the incoming keyword args positionally, based on the
                 # position of argument names in the core argument list.
 
-                for arg in keyargs.iterkeys():
+                for arg in in_kwargs.iterkeys():
                     try:
-                        call_list[ self.args.index(arg) ] = keyargs[arg]
+                        call_list[ self.args.index(arg) ] = in_kwargs[arg]
                     except ValueError:
                         raise Exception("Unknown keyword argument passed: %s" % arg)
 
             for index,arg in enumerate(in_args):
                 call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
-        return self.__execute__(cols, call_list, handle, condense, ret_type, callback)
+        return self.__execute__(cols, call_list, handle, condense, ret_type, returns, callback, extra_opt=opts)
 
 
-    def form_query(self, columns):
+    def form_query(self, columns, options={}):
         """Subclass function to create the query based on the columns
         provided at instance time."""
         pass
@@ -258,14 +243,14 @@ class meta_query(object):
 
 #    @exceptions.system
 #    @exceptions.base
-    def __execute__(self, columns, call_list, handle=None, condense=False, ret_type=None, callback=None):
+    def __execute__(self, columns, call_list, handle=None, condense=False, ret_type=None, returns=None, callback=None, extra_opt={}):
 
         '''
         Runs the stored query based on the arguments provided to
         __call__.
         '''
 
-        query = self.form_query(columns)
+        query = self.form_query(columns, options=extra_opt)
 
         d_out("meta_query __execute__: Handle is %s" % handle)
 
@@ -312,7 +297,7 @@ class meta_query(object):
                 # a one-length return set is going to be one object wrapping
                 # the return set.
 
-                if self.returns == "list":
+                if returns == "list":
 
                     if ret_type:
                         return [item]
@@ -321,7 +306,7 @@ class meta_query(object):
                     else:
                         return [item]
 
-                elif self.returns == "single":
+                elif returns == "single":
 
                     if ret_type:
                         return item
@@ -344,7 +329,7 @@ class meta_query(object):
                         return items
                 else:
                     # There's nothing
-                    if self.returns == "list":
+                    if returns == "list":
                         return []
                     else:
                         return None
@@ -381,10 +366,12 @@ class Function(meta_query):
         self.direct = kwargs.pop('direct', False)
         super(Function, self).__init__(*args, **kwargs)
 
-    def form_query(self, columns):
+    def form_query(self, columns, options={}):
 
         from_cl = 'FROM'
-        if self.direct:
+
+        direct = options.get('direct', self.direct)
+        if direct:
             if columns != '*':
                 raise ProgrammingError("Column lists cannot be specified for a direct function call.")
             columns = ''
@@ -404,13 +391,13 @@ class Property(Function):
 
 class Raw(meta_query):
 
-    def form_query(self, columns):
+    def form_query(self, columns, options={}):
 
         return self.query_base
 
 class Query(meta_query):
 
-    def form_query(self, columns):
+    def form_query(self, columns, options={}):
         where_list = None
         if len(self.args) >= 1:
             where_list = [x+"=%s" for x in self.args]
