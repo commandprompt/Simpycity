@@ -251,9 +251,9 @@ class SimpleModel(Construct):
                     raise FunctionError("This function can only take keyword arguments.")
                 my_args = kwargs.copy()
                 d_out("SimpleModel.__getattribute__ InstanceMethod: kwargs: %s" % repr(kwargs))
+                d_out("SimpleModel.__getattribute__ self.__dict__: %s" % self.__dict__)
                 for arg in attr.args:
                     d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
-                    d_out("SimpleModel.__getattribute__: %s" % self.__dict__)
                     if arg not in kwargs:
                         d_out("not in my_args")
                         if hasattr(self, arg):
