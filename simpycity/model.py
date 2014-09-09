@@ -150,13 +150,7 @@ class SimpleModel(Construct):
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
 
         # config and handle have been dealt with, now.
-        if hasattr(self, '__lazyload__'):
-            self.__lazyargs__ = args
-            self.__lazykwargs__ = kwargs
-            d_out("__lazyargs__: %s" % repr(self.__lazyargs__))
-            d_out("__lazykwargs__: %s" % repr(self.__lazykwargs__))
-
-        elif hasattr(self, '__load__'):
+        if hasattr(self, '__load__'):
 
             if args or kwargs:
                 self.__load_by_key__(*args, **kwargs)
@@ -184,10 +178,7 @@ class SimpleModel(Construct):
 
         rs = None
         try:
-            if hasattr(self, '__lazyload__'):
-                rs = self.__lazyload__(*args, **kwargs)
-            else:
-                rs = self.__load__(*args, **kwargs)
+            rs = self.__load__(*args, **kwargs)
         except psycopg2.InternalError, e:
             d_out("pgerror=%s pgcode=%s diag=%s" % (e.pgerror, e.pgcode, e.diag))
             if not (e.pgcode == 'P0002'): # no_data_found
@@ -263,7 +254,7 @@ class SimpleModel(Construct):
                             my_args[arg] = None
 
                 if 'options' not in kwargs:
-                    d_out("SimpleModel.__getattribute__: Didn't find options. Setting handle.")
+                    d_out("SimpleModel.__getattribute__: Didn't find options.")
                     my_args['options'] = {}
 
                 # pass self to the query object
@@ -300,87 +291,12 @@ class SimpleModel(Construct):
             args = self.__save__.args()
             my_args = {}
             for arg in args:
-                if arg in self.__dict__['__dirty']:
-                    my_args[arg] = self.__dict__['__dirty'][arg]
-                elif arg in self.__dict__:
-                    my_args[arg] = self.__dict__[arg]
-                else:
-                    my_args[arg] = None # Send the NULL to the database.
+                my_args[arg] = self.__dict__.get(arg, None)
             rs = self.__save__(**my_args).fetchone()
 
             for arg in self.table:
                 if arg in rs:
                     self.__dict__[arg] = rs[arg]
-                else:
-                    self.__dict__[arg] = self.__dict__['__dirty'][arg]
-
-            del(self.__dict__['__dirty'])
         else:
 #            from simpycity import CannotSave
             raise NotImplementedError("Cannot save without __save__ declaration.")
-
-
-    def __setattr__(self, name, value):
-        """Sets the provided name to the provided value, in the dirty
-        dictionary.
-        This only occurs if the specified name is in the table specification."""
-
-        if hasattr(self, 'table'):
-            if name in self.table:
-                if '__dirty' not in self.__dict__:
-                    self.__dict__['__dirty'] = {}
-
-                self.__dict__['__dirty'][name] = value
-                return
-
-        object.__setattr__(self, name, value)
-
-
-    def __getattr__(self, name):
-        """
-            Gets the provided name.
-            If the element is present in the dirty dictionary, this element is
-            returned first.
-            Otherwise, the element in the standard dictionary is returned.
-        """
-        
-        if self.__dict__.has_key('__dirty') and name in self.__dict__['__dirty']:
-            return self.__dict__['__dirty'][name]
-
-        if name in self.__dict__:
-            return self.__dict__[name]
-
-        # OK, since we got here, check if it's a first-time access to
-        # a table attr in a lazy-load model
-        try:
-            tbl = object.__getattribute__(self, 'table')
-        except AttributeError:
-            tbl = None
-
-        if tbl and name in tbl \
-           and (hasattr(self, '__lazyargs__') or hasattr(self, '__lazykwargs__')):
-            d_out('__getattr__: has lazyload')
-            la = object.__getattribute__(self, '__lazyargs__')
-            lk = object.__getattribute__(self, '__lazykwargs__')
-
-            # drop lazy args, so we only load once
-            del(self.__lazyargs__)
-            del(self.__lazykwargs__)
-
-            ll = object.__getattribute__(self, '__lazyload__')
-            if ll and (la is not None or lk is not None):
-                d_out('__getattr__: lazy-calling __load_by_key__')
-                object.__getattribute__(self, '__load_by_key__')(*la, **lk)
-                return self.__getattr__(name)
-
-        attr = object.__getattribute__(self, name) # Use the topmost parent version
-        return attr
-
-
-    def __contains__(self, item):
-        """
-            Internal method.
-            Tests if the internal table declaration has a given key.
-        """
-
-        return item in self.__dict__ or '__dirty' in self.__dict__ and item in self.__dict__['__dirty']

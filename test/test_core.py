@@ -132,20 +132,7 @@ class ModelTest(dbTest):
         )
         # So the model is set up correctly..
         
-    def testLazyInstanceLoader(self):
-        q = SimpleLazyModel(id=1)
-        self.assertEqual(
-            q.id,
-            1,
-            "Model id is set to 1."
-        )
-        self.assertEqual(
-            q.value,
-            "one",
-            "Model value is not 'Test row', got %s" % q.value
-        )
-        q.commit()
-        
+       
     def testInstanceFunctions(self):
         q = SimpleUpdateModel(id=1)
         try:
@@ -324,9 +311,6 @@ class SimpleInstanceModel(SimpleModel):
     
 class SimpleLoaderModel(SimpleInstanceModel):
     __load__ = Function("test_get",['id'])
-    
-class SimpleLazyModel(SimpleInstanceModel):
-    __lazyload__ = Function("test_get",['id'])
     
 class SimpleUpdateModel(SimpleLoaderModel):
     
