@@ -143,18 +143,20 @@ class meta_query(object):
 
         """
 
-        try:
-            if not self.query:
-                self.query = ''
-        except AttributeError:
-            self.query = ''
-        d_out("meta_query.__call__: query is %s" % self.query)
+        d_out("meta_query.__call__: query is %s" % self.query_base)
         self.call_list = []
 #        self.args = in_args
 
         d_out("meta_query.__call__: Got args %s" % in_kwargs)
 
-        opts = in_kwargs.pop('options', {})
+        opts = in_kwargs.pop('options', None)
+        if opts:
+            # we are going to pop out the options we handle ourselves,
+            # then pass any extra options down: make a copy to avoid
+            # modifying the passed options dict
+            opts = opts.copy()
+        else:
+            opts = {}
 
         columns = opts.pop('columns', [])
         handle = opts.pop('handle', None)
@@ -222,7 +224,9 @@ class meta_query(object):
             for index,arg in enumerate(in_args):
                 call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
-        return self.__execute__(cols, call_list, handle, condense, ret_type, returns, callback, extra_opt=opts)
+        rs = self.__execute__(cols, call_list, handle, condense, ret_type, returns, callback, extra_opt=opts)
+        d_out("meta_query.__call__: returning rs of %s" % rs)
+        return rs
 
 
     def form_query(self, columns, options={}):
