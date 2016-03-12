@@ -104,25 +104,6 @@ class meta_query(object):
 
         self.__attr__['handle'] = handle
 
-        # So now, we need to load our Exceptable exceptions, if any, and map
-        # them into the exceptable object.
-#        self.__get_exceptions__()
-
-#    def __get_exceptions__(self):
-
-#        if self.__attr__['handle']:
-
-#            cur = self.__attr__['handle'].cursor(factory=extras.DictCursor)
-
-#            rs = cur.execute("SELECT exception, description FROM exceptable.exceptions")
-
-#            for row in rs.fetchall():
-#                exceptions.base.map(row['exception'], row['description'])
-#        else:
-#            # Raise an exception? This is a somewhat odd
-#            # state to end up in.
-#            pass
-
     def __call__(self, *in_args, **in_kwargs):
 
         """
@@ -144,8 +125,6 @@ class meta_query(object):
         """
 
         d_out("meta_query.__call__: query is %s" % self.query_base)
-        self.call_list = []
-#        self.args = in_args
 
         d_out("meta_query.__call__: Got args %s" % in_kwargs)
 
