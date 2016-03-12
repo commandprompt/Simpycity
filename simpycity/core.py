@@ -163,7 +163,7 @@ class meta_query(object):
         d_out("in_kwargs: %s" % str(in_kwargs))
 
         # If we were called with arguments
-        if in_args >= 1:
+        if len(in_args) >= 1:
 
             # Tests if the number of positional arguments + the number of
             # keyword arguments is less than the number of arguments this
@@ -185,23 +185,23 @@ class meta_query(object):
                 raise Exception("Too many arguments: Expected %s, got %s" %
                                 (len(self.args), len(in_args)+len(in_kwargs)))
 
-            # Create a fixed-length array equal to the number of arguments
-            # this instance requires.
+        # Create a fixed-length array equal to the number of arguments
+        # this instance requires.
 
-            call_list = ['' for x in xrange(len(self.args))]
+        call_list = ['' for x in xrange(len(self.args))]
 
-            if in_kwargs:
-                # Map the incoming keyword args positionally, based on the
-                # position of argument names in the core argument list.
+        if in_kwargs:
+            # Map the incoming keyword args positionally, based on the
+            # position of argument names in the core argument list.
 
-                for arg in in_kwargs.iterkeys():
-                    try:
-                        call_list[ self.args.index(arg) ] = in_kwargs[arg]
-                    except ValueError:
-                        raise Exception("Unknown keyword argument passed: %s" % arg)
+            for arg in in_kwargs.iterkeys():
+                try:
+                    call_list[ self.args.index(arg) ] = in_kwargs[arg]
+                except ValueError:
+                    raise Exception("Unknown keyword argument passed: %s" % arg)
 
-            for index,arg in enumerate(in_args):
-                call_list[index] = arg
+        for index,arg in enumerate(in_args):
+            call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
         rs = self.__execute__(cols, call_list, handle, condense, ret_type, returns, callback, extra_opt=opts)
         d_out("meta_query.__call__: returning rs of %s" % rs)
