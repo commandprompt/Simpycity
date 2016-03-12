@@ -91,25 +91,6 @@ class Construct(object):
         else:
             return attr
             
-    # @property
-    # def handle(self):
-    #     
-    #     h = self.__dict__["__handle__"]
-    #     if (h.open):
-    #         # Tests for the handle not being closed, and attempts to
-    #         # reopen the handle on the Handle side.
-    #         return h 
-    #         
-    #     
-    # @handle.setter
-    # def handle(self, value):
-    # 
-    #     """Sets the handle object. 
-    #     Doesn't bother testing whether or not the handle is any good (this 
-    #     needs to be tested at the get) level.
-    #     """
-    #     self.__dict__['__handle__'] = value
-
 
 class SimpleModel(Construct):
 
@@ -118,8 +99,10 @@ class SimpleModel(Construct):
     Implements the barest minimum of Model functionality to operate.
 
     The SimpleModel expects a table=[] to declare its columns.
-    SimpleModel expects __load__ to be a function that loads an instance, based
-    on primary key, from the database.
+    SimpleModel expects one of:
+    * __load__ to be a function that loads an instance, based on primary key, from the database.
+    * lazyload to be a function that loads an instance from the database, depending on the existance of a value for
+      loaded_indicator, which should be a member of table that will only be populated after the instance is fully loaded.
 
     """
 
@@ -146,6 +129,23 @@ class SimpleModel(Construct):
             d_out("SimpleModel.__init__: Got args of %s" % repr(args))
             d_out("SimpleModel.__init__: Got kwargs of %s" % repr(kwargs))
 
+        #
+        # If the type defines a base type, the base instance will be
+        # passed in the 'base_' kwarg: merge the base attrs into
+        # kwargs and hand over to superclass.
+        #
+        SimpleModel.merge_base_attrs(kwargs)
+
+        #
+        # Initialize table attrs by copying from keyword arguments.
+        #
+        # This makes sure the objects not loaded from DB has at least
+        # the None values in attrs and access to them doesn't raise.
+        #
+        if hasattr(self, 'table'):
+            for name in self.table:
+                self.__dict__[name] = kwargs.get(name, None)
+
         # should automatically pick up config= and handle=
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
 
@@ -155,6 +155,10 @@ class SimpleModel(Construct):
             if args or kwargs:
                 self.__load_by_key__(*args, **kwargs)
 
+        if hasattr(self, 'lazyload') and isinstance(object.__getattribute__(self, 'lazyload'),Function) and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
+            self._loaded = True
+        else:
+            self._loaded = False
 
     def __load_by_key__(self, *args, **kwargs):
         """
@@ -194,6 +198,7 @@ class SimpleModel(Construct):
                 d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(rs[item])))
                 self.__dict__[item] = rs[item]
             d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
+            self._loaded = True
         except TypeError, e:
             # We can assume that we've been given a single record that
             # cannot be subscripted. Therefore, we'll set it to the first
@@ -218,6 +223,26 @@ class SimpleModel(Construct):
         """
 
         attr = object.__getattribute__(self,name)
+        if name == '__load__':
+            d_out("skipping: %s" % name)
+            return attr
+
+        if attr is None and name in object.__getattribute__(self, 'table') and not object.__getattribute__(self,'_loaded'):
+            should_lazyload = hasattr(self,'lazyload')
+        else:
+            should_lazyload = False
+
+        if should_lazyload:
+            attrs = object.__getattribute__(self, '__dict__')
+            attrs['_loaded'] = True
+            rs = self.lazyload(options={'handle':self.handle, 'direct': False})
+            if not rs:
+                raise NotFoundError()
+            loaded_attrs = dict(rs)
+            SimpleModel.merge_base_attrs(loaded_attrs)
+            attrs.update(loaded_attrs)
+            return attrs[name]
+
         # This uses a try/catch because non-instance attributes (like
         # __class__) will throw a TypeError if you try to use type(attr).mro().
 
@@ -228,10 +253,6 @@ class SimpleModel(Construct):
         except TypeError:
             #d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
             mro = [x.__name__ for x in type(attr).mro(attr)]
-
-        if name == '__load__':
-            d_out("skipping: %s" % name)
-            return attr
 
         if "meta_query" in mro:
 
@@ -274,7 +295,6 @@ class SimpleModel(Construct):
         else:
             return attr
 
-
     def set(self,col,val):
         self.__dict__[col] = val
 
@@ -300,3 +320,44 @@ class SimpleModel(Construct):
         else:
 #            from simpycity import CannotSave
             raise NotImplementedError("Cannot save without __save__ declaration.")
+
+    @classmethod
+    def register_composite(cls, name, conn, factory=None):
+        """
+        Maps a Postgresql type to this class.  Every time
+        a SQL function returns a registered type (including array
+        elements and individual columns, recursively), this class
+        will be instantiated automatically.
+
+        The object attributes will be passed to the provided callable in
+        a form of keyword arguments.
+
+        :param name: the name of a PostgreSQL composite type, e.g. created using
+            the |CREATE TYPE|_ command
+        :param conn: a connection used to find the type oid and components
+        :param factory: if specified it should be a `psycopg2.extras.CompositeCaster` subclass: use
+            it to :ref:`customize how to cast composite types <custom-composite>`
+        :return: the registered `CompositeCaster` or *factory* instance
+            responsible for the conversion
+        """
+        return psycopg2.extras.register_composite(
+            name,
+            conn,
+            globally=True,  # in case of reconnects
+            factory=factory
+        )
+
+    @staticmethod
+    def merge_base_attrs(attrs):
+        """
+        If one of the attrs is named "base_", assume that attribute is an instance of SimpleModel mapped on a Postgresql
+        composite type, and that the base_ instance is of a superclass of this class. Expand the attributes of the
+        base_ type and assign to class attributes.
+
+        psycopg2's type casting uses namedtuple() and that forbids a
+        name to start with underscore, so we end it with _ instead
+        """
+        base = attrs.pop('base_', None)
+        if base:
+            for name in base.table:
+                attrs[name] = base.__dict__[name]
