@@ -233,9 +233,10 @@ class SimpleModel(Construct):
             should_lazyload = False
 
         if should_lazyload:
+            d_out("lazyloading {0} on {1}".format(self.__class__, name))
             attrs = object.__getattribute__(self, '__dict__')
             attrs['_loaded'] = True
-            rs = self.lazyload(options={'handle':self.handle, 'direct': False})
+            rs = self.lazyload(options={'handle':self.handle, 'direct': False, 'reduce': True})
             if not rs:
                 raise NotFoundError()
             loaded_attrs = dict(rs)
@@ -322,7 +323,7 @@ class SimpleModel(Construct):
             raise NotImplementedError("Cannot save without __save__ declaration.")
 
     @classmethod
-    def register_composite(cls, name, conn, factory=None):
+    def register_composite(cls, name, handle, factory=None):
         """
         Maps a Postgresql type to this class.  Every time
         a SQL function returns a registered type (including array
@@ -334,15 +335,41 @@ class SimpleModel(Construct):
 
         :param name: the name of a PostgreSQL composite type, e.g. created using
             the |CREATE TYPE|_ command
-        :param conn: a connection used to find the type oid and components
+        :param handle: Simpycity handle
         :param factory: if specified it should be a `psycopg2.extras.CompositeCaster` subclass: use
             it to :ref:`customize how to cast composite types <custom-composite>`
         :return: the registered `CompositeCaster` or *factory* instance
             responsible for the conversion
         """
+        class CustomCompositeCaster(psycopg2.extras.CompositeCaster):
+
+            def make(self, values):
+                d_out("CustomCompositeCaster.make: cls={0} values={1}".format(repr(cls), repr(values)))
+                return cls(**dict(zip(self.attnames, values)))
+
+        PG_TYPE_SQL = """SELECT array_agg(attname)
+FROM
+    (
+        SELECT attname
+        FROM
+            pg_type t
+            JOIN pg_namespace ns ON typnamespace = ns.oid
+            JOIN pg_attribute a ON attrelid = typrelid
+        WHERE nspname = %s AND typname = %s
+            AND attnum > 0 AND NOT attisdropped
+        ORDER BY attnum
+    ) sub;"""
+
+        if len(cls.table) == 0 and cls.pg_type is not None:
+            cursor = handle.cursor()
+            cursor.execute(PG_TYPE_SQL, cls.pg_type)
+            row = cursor.fetchone()
+            cls.table = row[0]
+        if factory is None:
+            factory = CustomCompositeCaster
         return psycopg2.extras.register_composite(
             name,
-            conn,
+            handle.conn,
             globally=True,  # in case of reconnects
             factory=factory
         )
