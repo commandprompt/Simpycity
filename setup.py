@@ -7,20 +7,19 @@ except ImportError:
 
 setup(
     name='Simpycity',
-    version='0.3.1',
+    version='1.0',
     description='A simple functionally-oriented PostgreSQL DB access library.',
-    author='Aurynn Shaw, Commandprompt, Inc.',
-    author_email='ashaw@commandprompt.com',
-    url='https://public.commandprompt.com/projects/simpycity/wiki',
-    download_url='https://projects.commandprompt.com/public/simpycity/repo/dist/Simpycity-0.3.1.tar.gz',
+    author='Commandprompt, Inc.',
+    author_email='support@commandprompt.com',
+    url='https://github.com/commandprompt/Simpycity',
+    #FIXME
+    download_url='',
     install_requires=[
-        "psycopg2>=2.0.8",
-#        "exceptable>=0.1.0"
+        "psycopg2>=2.5"
     ],
     packages=find_packages(),
     test_suite='nose.collector',
     license='LGPL',
-#    packages=['simpycity','test'],
     include_package_data=True,
     zip_safe=False,
     classifiers=[
