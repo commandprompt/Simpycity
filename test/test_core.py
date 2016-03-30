@@ -1,8 +1,8 @@
 import unittest
 from simpycity import config
-from simpycity.core import Function, Query, Raw
+from simpycity.core import Raw, Query, Function, FunctionSingle, FunctionTypedSingle
 from simpycity.model import SimpleModel, Construct
-import psycopg2
+from psycopg2.extensions import cursor as _cursor
 import psycopg2.pool
 from optparse import OptionParser
 import sys
@@ -84,7 +84,7 @@ class ConstructTest(dbTest):
         instance = o()
         rs = instance.r()
         self.failUnless(
-            'TypedResultSet' in [x.__name__ for x in type(rs).mro()],
+            isinstance(rs, _cursor),
             "Construct function doers not return expected result set."
         )
 
@@ -119,7 +119,6 @@ class ModelTest(dbTest):
 
     def testInstanceLoader(self):
         q = SimpleLoaderModel(id=1)
-        q.commit()
         self.assertEqual(
             q.id,
             1,
@@ -132,19 +131,19 @@ class ModelTest(dbTest):
         )
 
     def testLazyLoad(self):
-        q = SimpleLazyLoaderModel(id=1)
+        model = SimpleLazyLoaderModel(id=1)
         self.assertEqual(
-            q.value,
+            model.value,
             "one",
-            "Model value is not 'Test row', got %s" % q.value
+            "Model value is not 'Test row', got %s" % model.value
         )
 
-    def testTypeRegistration(self):
+    def testTypeRegistrationLazy(self):
         handle = config.handle_factory()
         SimpleLazyLoaderModel.register_composite('public.test_table', handle)
-        f = Function('test_get',['id'], direct=True, handle=handle)
-        model = f(id=1, options={'reduce': True})
-        self.assertTrue(isinstance(model,SimpleLazyLoaderModel), 'result row is registered class instance')
+        f = FunctionTypedSingle('test_get',['id'], handle=handle)
+        model = f(id=1)
+        self.assertTrue(isinstance(model, SimpleLazyLoaderModel), 'result row is registered class instance')
         self.assertEqual(
             model.value,
             "one",
@@ -153,23 +152,19 @@ class ModelTest(dbTest):
 
     def testInstanceFunctions(self):
         q = SimpleUpdateModel(id=1)
-        try:
-            rs = q.update(new_value="Instance function test")
-            # Now, the rs should have returned a single row
-            self.assertEquals(len(rs),1,"Update returned a single row.")
-            row = rs.next()
-            rs.commit()
-            self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
-            f = SimpleUpdateModel(id=1)
-            self.assertEqual(
+        rs = q.update(new_value="Instance function test")
+        # Now, the rs should have returned a single row
+        self.assertEquals(rs.rowcount,1,"Update returned a single row.")
+        row = rs.fetchone()
+        self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
+        f = SimpleUpdateModel(id=1)
+        self.assertEqual(
+            f.value,
+            "Instance function test",
+            "Key was not successfully set, got '%s', expected '%s'" % (
                 f.value,
-                "Instance function test",
-                "Key was not successfully set, got '%s', expected '%s'" % (
-                    f.value,
-                    "Instance function test" )
-                )
-        except Exception, e:
-            self.fail("Exception %s during test." % e)
+                "Instance function test" )
+            )
 
 
 class FunctionTest(dbTest):
@@ -187,14 +182,13 @@ class FunctionTest(dbTest):
 
         f = Function("test")
         rs = f()
-        self.assertEqual(len(rs),3,'Error in execute of function test, expected 3 rows, got %s' % len(rs))
+        self.assertEqual(rs.rowcount,3,'Error in execute of function test, expected 3 rows, got %s' % rs.rowcount)
 
 
     def testPartialReturnSet(self):
         f = Function("test")
         rs = f(options=dict(columns=['id']))
-        rs.commit()
-        self.assertEqual(len(rs),3,"Partial Result Set does not have 3 entries.")
+        self.assertEqual(rs.rowcount,3,"Partial Result Set does not have 3 entries.")
 
         for row in rs:
             try:
@@ -209,8 +203,7 @@ class FunctionTest(dbTest):
     def testPartialWithArguments(self):
         f = Function("test",['id'])
         rs = f(1,options=dict(columns=['id']))
-        rs.commit()
-        self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
+        self.assertEqual(rs.rowcount,1,"Partial with Arguments returns 1 row.")
 
         for row in rs:
             try:
@@ -225,7 +218,7 @@ class FunctionTest(dbTest):
     def testOutsideRange(self):
         f = Function("test",['id'])
         rs = f(4)
-        self.assertEqual(len(rs),0,"Request outside range returns 0 rows.")
+        self.assertEqual(rs.rowcount,0,"Request outside range returns 0 rows.")
 
 
 class QueryTest(dbTest):
@@ -238,7 +231,7 @@ class QueryTest(dbTest):
             "Return from query creation is of type sql_function."
         )
         rs = q()
-        self.assertEqual(len(rs),3,"Bare query result set has %s, expected 3." % len(rs))
+        self.assertEqual(rs.rowcount,3,"Bare query result set has %s, expected 3." % rs.rowcount)
 
     def testWhereQuery(self):
 
@@ -248,26 +241,11 @@ class QueryTest(dbTest):
         except Exception, e:
             self.fail("Failed with exception %s" % e)
 
-        self.assertEqual(len(rs),1,"ResultSet has a single entry")
+        self.assertEqual(rs.rowcount,1,"ResultSet has a single entry")
 
-        row = rs.next()
-        rs.commit()
+        row = rs.fetchone()
         self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
         self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
-
-    def testTypedReturn(self):
-        q = Query("test_table",['id'],return_type=SimpleReturn)
-        try:
-            rs = q(1)
-
-        except Exception, e:
-            self.fail("Failed with exception %s" % e)
-        rs.commit()
-        for row in rs:
-            self.failUnless(
-                'SimpleReturn' in [x.__name__ for x in type(row).mro()],
-                "Return from Typed Return is not SimpleReturn."
-            )
 
     def testPartialReturnSet(self):
         q = Query("test_table")
@@ -276,7 +254,7 @@ class QueryTest(dbTest):
         except Exception, e:
             self.fail("Failed with exception %s" % e)
 
-        self.assertEqual(len(rs),3,"Partial Result Set has 3 entries, as expected.")
+        self.assertEqual(rs.rowcount,3,"Partial Result Set has 3 entries, as expected.")
 
         for row in rs:
             try:
@@ -288,7 +266,7 @@ class QueryTest(dbTest):
     def testPartialWithArguments(self):
         f = Function("test",['id'])
         rs = f(1,options=dict(columns=['id']))
-        self.assertEqual(len(rs),1,"Partial with Arguments returns 1 row.")
+        self.assertEqual(rs.rowcount,1,"Partial with Arguments returns 1 row.")
 
         for row in rs:
             try:
@@ -309,10 +287,9 @@ class RawTest(dbTest):
         except Exception, e:
             self.fail("Failed with exception %s" % e)
 
-        self.assertEqual(len(rs), 1, "ResultSet has single entry.")
+        self.assertEqual(rs.rowcount, 1, "ResultSet has single entry.")
 
-        row = rs.next()
-        rs.commit()
+        row = rs.fetchone()
         self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
         self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
 
@@ -328,10 +305,10 @@ class SimpleInstanceModel(SimpleModel):
     get = Function("test_get",['id'])
 
 class SimpleLoaderModel(SimpleInstanceModel):
-    __load__ = Function("test_get",['id'])
+    __load__ = FunctionSingle("test_get",['id'])
 
 class SimpleLazyLoaderModel(SimpleReturn):
-    lazyload = Function("test_get",['id'], direct=True)
+    lazyload = FunctionSingle("test_get",['id'])
     loaded_indicator = 'value'
 
 class SimpleUpdateModel(SimpleLoaderModel):

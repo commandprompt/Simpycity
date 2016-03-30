@@ -1,5 +1,5 @@
 from simpycity import NotFoundError
-from simpycity.core import Function, FunctionError, ProceduralException, Raw, Query
+from simpycity.core import Function, FunctionError, FunctionSingle
 from simpycity import config as g_config
 import psycopg2
 
@@ -100,8 +100,8 @@ class SimpleModel(Construct):
 
     The SimpleModel expects a table=[] to declare its columns.
     SimpleModel expects one of:
-    * __load__ to be a function that loads an instance, based on primary key, from the database.
-    * lazyload to be a function that loads an instance from the database, depending on the existance of a value for
+    * __load__ to be a FunctionSingle that loads an instance, based on primary key, from the database.
+    * lazyload to be a FunctionSingle that loads an instance from the database, depending on the existance of a value for
       loaded_indicator, which should be a member of table that will only be populated after the instance is fully loaded.
 
     """
@@ -182,21 +182,21 @@ class SimpleModel(Construct):
 
         rs = None
         try:
-            rs = self.__load__(*args, **kwargs)
+            row = self.__load__(*args, **kwargs)
         except psycopg2.InternalError, e:
             d_out("pgerror=%s pgcode=%s diag=%s" % (e.pgerror, e.pgcode, e.diag))
             if not (e.pgcode == 'P0002'): # no_data_found
                 raise # as InternalError
 
-        if rs is None:
+        if row is None:
             raise NotFoundError()
 
         d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
         try:
             # TODO: why list them explicitly in the table attribute?
             for item in self.table:
-                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(rs[item])))
-                self.__dict__[item] = rs[item]
+                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(row[item])))
+                self.__dict__[item] = row[item]
             d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
             self._loaded = True
         except TypeError, e:
@@ -204,7 +204,7 @@ class SimpleModel(Construct):
             # cannot be subscripted. Therefore, we'll set it to the first
             # value in self.table
             d_out("Simplemodel.__load_by_key__: TypeError: %s" % e)
-            self.__setattr__(self.table[0], rs)
+            self.__setattr__(self.table[0], row)
             raise
 
     def __getattribute__(self,name):
@@ -236,7 +236,7 @@ class SimpleModel(Construct):
             d_out("lazyloading {0} on {1}".format(self.__class__, name))
             attrs = object.__getattribute__(self, '__dict__')
             attrs['_loaded'] = True
-            rs = self.lazyload(options={'handle':self.handle, 'direct': False, 'reduce': True})
+            rs = self.lazyload(options={'handle':self.handle})
             if not rs:
                 raise NotFoundError()
             loaded_attrs = dict(rs)

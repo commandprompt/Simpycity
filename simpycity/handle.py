@@ -48,7 +48,8 @@ class Handle(object):
         if not self.open:
             raise Exception("Connection isn't open.")
 
-        kwargs["cursor_factory"] = extras.DictCursor
+        if 'cursor_factory' not in kwargs or kwargs['cursor_factory'] == None:
+            kwargs["cursor_factory"] = extras.DictCursor
         return self.conn.cursor(*args,**kwargs)
 
     def execute(self, *args, **kwargs):

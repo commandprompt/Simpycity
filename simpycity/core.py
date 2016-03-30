@@ -15,6 +15,7 @@
 
 import psycopg2
 from psycopg2.errorcodes import *
+from psycopg2.extensions import cursor as _cursor
 #from psycopg2 import extras
 
 import re
@@ -103,6 +104,7 @@ class meta_query(object):
         self.callback = callback
 
         self.__attr__['handle'] = handle
+        self.cursor_factory = None #optionally override this
 
     def __call__(self, *in_args, **in_kwargs):
 
@@ -247,78 +249,23 @@ class meta_query(object):
                 d_out("meta_query.__execute__: Found object handle.. ")
                 handle = self.__attr__['handle']
 
-
-        cursor = handle.cursor()
+        cursor = handle.cursor(cursor_factory=self.cursor_factory)
         d_out("meta_query.__execute__: Cursor is %s" % cursor)
         d_out("meta_query.__execute__: Query: %s" % ( query ) )
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
 
 
         try:
-            rs = cursor.execute(query, call_list)
+            cursor.execute(query, call_list)
 
         except psycopg2.OperationalError as e:
             # retry query on stale connection error
             d_out("OperationalError: %s" % e)
 
             cursor = handle.cursor()
-            rs = cursor.execute(query, call_list)
+            cursor.execute(query, call_list)
 
-        rs = TypedResultSet(cursor,ret_type,callback=callback)
-        rs.statement = query
-        rs.call_list = call_list
-        rs.handle = handle
-
-        d_out("meta_query.__execute__: Checking for condense..")
-        if condense:
-            d_out("meta_query.__execute__: Found condense..")
-            if len(rs) == 1:
-
-                item = rs.next()
-                # Let's test a little more intelligently here.
-                # If we're using a return type, then we can assume that
-                # a one-length return set is going to be one object wrapping
-                # the return set.
-
-                if returns == "list":
-
-                    if ret_type:
-                        return [item]
-                    elif len(item) == 1:
-                        return [item[0]]
-                    else:
-                        return [item]
-
-                elif returns == "single":
-
-                    if ret_type:
-                        return item
-                    elif len(item) == 1:
-                        # It's a list of columns, with one entry.
-                        return item[0]
-                    else:
-                        # It's definitely a list, with multiple entries. Just
-                        # return.
-                        return item
-            else:
-                # It's larger than a single row.
-                items = rs.fetchall()
-                if len(items) >= 1:
-                    if ret_type:
-                        return items
-                    elif len(items[0]) == 1:
-                        return [x[0] for x in items]
-                    else:
-                        return items
-                else:
-                    # There's nothing
-                    if returns == "list":
-                        return []
-                    else:
-                        return None
-        else:
-            d_out("meta_query.__execute__: condense not true, returning rs of %s" % rs)
-            return rs
+        return cursor
 
     def commit(self):
 
@@ -368,9 +315,63 @@ class Function(meta_query):
 
         return "SELECT %s %s %s" % (columns, from_cl, func)
 
-# enjoys special handling in SimpleModel.__getattribute__
-class Property(Function):
+
+class TypedCursor(_cursor):
+    """
+    A cursor for result sets having only a single (typically composite) column.
+    Rather than a row being a tuple, it is simply the value of the one column.
+    """
+    def execute(self, query, vars=None):
+        super(TypedCursor, self).execute(query, vars)
+        if len(self.description) != 1:
+            raise Exception("Cursor must return exactly one column")
+
+    def fetchone(self):
+        row = super(TypedCursor, self).fetchone()
+        return row[0]
+
+    def fetchall(self):
+        rows = super(TypedCursor, self).fetchall()
+        rows = [_[0] for _ in rows]
+        return rows
+
+    def fetchmany(self, size=None):
+        rows = super(TypedCursor, self).fetchmany(size)
+        rows = [_[0] for _ in rows]
+        return rows
+
+
+class FunctionSingle(Function):
+
+    def __call__(self, *in_args, **in_kwargs):
+#         if 'options' not in in_kwargs:
+#             in_kwargs['options'] = {}
+#         in_kwargs['options']['reduce'] = True
+        cursor = super(FunctionSingle, self).__call__(*in_args, **in_kwargs)
+        if cursor.rowcount <> 1:
+            raise Exception("Expect only a single row")
+        row = cursor.fetchone()
+        return row
+
+
+class FunctionTyped(Function):
+    """Expect the result set to have only a single (typically composite) column"""
+
+    def __init__(self, *args, **kwargs):
+        self.direct = True
+        kwargs.pop('direct',None)
+        super(Function, self).__init__(*args, **kwargs)
+        self.cursor_factory = TypedCursor
+
+
+class FunctionTypedSingle(FunctionSingle, FunctionTyped):
+    """Expect the result set to be a single row with a single (typically composite) column"""
     pass
+
+# enjoys special handling in SimpleModel.__getattribute__
+class Property(FunctionTypedSingle):
+    pass
+
 
 class Raw(meta_query):
 
@@ -390,94 +391,6 @@ class Query(meta_query):
             query += " WHERE " + " AND ".join(where_list)
 
         return query
-
-class SimpleResultSet(object):
-
-    def __init__(self, cursor,*args,**kwargs):
-        self.cursor = cursor
-
-    def __iter__(self):
-        row = self.cursor.fetchone()
-        while row:
-            yield row
-            row = self.cursor.fetchone()
-            if row is None:
-                raise StopIteration()
-
-    def __len__(self):
-        if self.cursor is not None:
-            return self.cursor.rowcount
-        else:
-            return 0
-
-    def next(self):
-        return self.fetchone()
-
-    def fetchone(self):
-        return self.wrapper(self.cursor.fetchone())
-
-    def fetchall(self):
-        return [self.wrapper(x) for x in self.cursor.fetchall()]
-
-    def commit(self):
-        return self.handle.commit()
-
-    def rollback(self):
-        return self.handle.rollback()
-
-    def wrapper(self,item):
-        return item
-
-    def __getitem__(self, key):
-
-        """Gets the specified index key. This has the slight problem of
-        requiring the entire result set up to the requested key to be pulled
-        into the result set object.
-
-        Use with care.
-        """
-
-        if key > self.cursor.rowcount:
-            raise IndexError("Index %i out of range" % key )
-
-        if self.__store__ is not None:
-            self.__store__ = self.cursor.fetchall()
-        return self.__store__[key]
-
-    def __setitem__(self, *args, **kwargs):
-
-        raise AttributeError("Cannot set resultset values.")
-
-
-class TypedResultSet(SimpleResultSet):
-
-    def __init__(self,cursor,i_type,callback=None,**kwargs):
-        self.cursor=cursor
-        self.type=i_type
-        self.callback=callback
-
-    def __iter__(self):
-        row = self.cursor.fetchone()
-        while row:
-            o = self.wrapper(row)
-            yield o
-            row = self.cursor.fetchone()
-            if row is None:
-                raise StopIteration()
-
-    def wrapper(self,item):
-        o = self.wrap_item(item)
-        if self.callback:
-            self.callback(o)
-        return o
-
-    def wrap_item(self,item):
-        if self.type is None:
-            return item
-        i = self.type(handle=self.handle)
-        for col in item.keys():
-            setattr(i, col, item[col])
-        return i
 
 class FunctionError(BaseException):
     """
