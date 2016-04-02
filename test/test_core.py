@@ -1,6 +1,6 @@
 import unittest
 from simpycity import config
-from simpycity.core import Raw, Query, Function, FunctionSingle, FunctionTypedSingle
+from simpycity.core import *
 from simpycity.model import SimpleModel, Construct
 from psycopg2.extensions import cursor as _cursor
 import psycopg2
@@ -109,7 +109,7 @@ class ModelTest(dbTest):
 
     def testInstanceMethods(self):
         q = SimpleInstanceModel()
-        self.asserTrue(
+        self.assertTrue(
             isinstance(q, SimpleModel),
             "Model object not successfully created."
         )
@@ -163,6 +163,14 @@ class ModelTest(dbTest):
                 f.value,
                 "Instance function test" )
             )
+
+    def testTypedSet(self):
+        handle = config.handle_factory()
+        SimpleReturn.register_composite('public.test_table', handle)
+        f = FunctionTyped('test',[])
+        cur = f()
+        for item in cur.fetchall():
+            self.assertTrue(isinstance(item, SimpleReturn), 'Each "row" in FunctionTyped cursor result is a single model object')
 
     def testNestedModel(self):
         handle = config.handle_factory()
