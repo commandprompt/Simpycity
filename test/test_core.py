@@ -80,10 +80,10 @@ class ConstructTest(dbTest):
             r = Raw("SELECT * FROM test_table")
 
         instance = o()
-        rs = instance.r()
+        cur = instance.r()
         self.failUnless(
-            isinstance(rs, _cursor),
-            "Construct function doers not return expected result set."
+            isinstance(cur, _cursor),
+            "Construct function doers not return expected result type."
         )
 
     def testCreateConstruct(self):
@@ -92,8 +92,8 @@ class ConstructTest(dbTest):
             r = Raw("SELECT * FROM test_table")
 
         instance = o()
-        self.failUnless(
-            'Construct' in [x.__name__ for x in type(instance).mro()],
+        self.assertTrue(
+            isinstance(instance,Construct),
             "Construct not created successfully."
         )
 
@@ -102,15 +102,15 @@ class ModelTest(dbTest):
     def testCreateModel(self):
 
         q = SimpleReturn()
-        self.failUnless(
-            'SimpleModel' in [x.__name__ for x in type(q).mro()],
+        self.assertTrue(
+            isinstance(q, SimpleModel),
             "Model object not successfully created."
         )
 
     def testInstanceMethods(self):
         q = SimpleInstanceModel()
-        self.failUnless(
-            'SimpleModel' in [x.__name__ for x in type(q).mro()],
+        self.asserTrue(
+            isinstance(q, SimpleModel),
             "Model object not successfully created."
         )
 
@@ -150,10 +150,10 @@ class ModelTest(dbTest):
 
     def testInstanceFunctions(self):
         q = SimpleUpdateModel(id=1)
-        rs = q.update(new_value="Instance function test")
+        cur = q.update(new_value="Instance function test")
         # Now, the rs should have returned a single row
-        self.assertEquals(rs.rowcount,1,"Update returned a single row.")
-        row = rs.fetchone()
+        self.assertEquals(cur.rowcount,1,"Update returned a single row.")
+        row = cur.fetchone()
         self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
         f = SimpleUpdateModel(id=1)
         self.assertEqual(
@@ -184,7 +184,7 @@ class FunctionTest(dbTest):
 
         f = Function("test")
         self.failUnless(
-            'meta_query' in [x.__name__ for x in type(f).mro()],
+            isinstance(f, Function),
             "Isn't a Simpycity function object."
         )
 
@@ -192,16 +192,16 @@ class FunctionTest(dbTest):
     def testExecuteFunction(self):
 
         f = Function("test")
-        rs = f()
-        self.assertEqual(rs.rowcount,3,'Error in execute of function test, expected 3 rows, got %s' % rs.rowcount)
+        cur = f()
+        self.assertEqual(cur.rowcount,3,'Error in execute of function test, expected 3 rows, got %s' % cur.rowcount)
 
 
     def testPartialReturnSet(self):
         f = Function("test")
-        rs = f(options=dict(columns=['id']))
-        self.assertEqual(rs.rowcount,3,"Partial Result Set does not have 3 entries.")
+        cur = f(options=dict(columns=['id']))
+        self.assertEqual(cur.rowcount,3,"Partial Result Set does not have 3 entries.")
 
-        for row in rs:
+        for row in cur:
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
@@ -232,36 +232,36 @@ class QueryTest(dbTest):
 
         q = Query("test_table")
         self.failUnless(
-            'meta_query' in [x.__name__ for x in type(q).mro()],
+            isinstance(q, Query),
             "Return from query creation is of type sql_function."
         )
-        rs = q()
-        self.assertEqual(rs.rowcount,3,"Bare query result set has %s, expected 3." % rs.rowcount)
+        cur = q()
+        self.assertEqual(cur.rowcount,3,"Bare query result set has %s, expected 3." % cur.rowcount)
 
     def testWhereQuery(self):
 
         q = Query("test_table",['id'])
         try:
-            rs = q(1)
+            cur = q(1)
         except Exception, e:
             self.fail("Failed with exception %s" % e)
 
-        self.assertEqual(rs.rowcount,1,"ResultSet has a single entry")
+        self.assertEqual(cur.rowcount,1,"ResultSet has a single entry")
 
-        row = rs.fetchone()
+        row = cur.fetchone()
         self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
         self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
 
     def testPartialReturnSet(self):
         q = Query("test_table")
         try:
-            rs = q(options=(dict(columns=['id'])))
+            cur = q(options=(dict(columns=['id'])))
         except Exception, e:
             self.fail("Failed with exception %s" % e)
 
-        self.assertEqual(rs.rowcount,3,"Partial Result Set has 3 entries, as expected.")
+        self.assertEqual(cur.rowcount,3,"Partial Result Set has 3 entries, as expected.")
 
-        for row in rs:
+        for row in cur:
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
@@ -270,10 +270,10 @@ class QueryTest(dbTest):
 
     def testPartialWithArguments(self):
         f = Function("test",['id'])
-        rs = f(1,options=dict(columns=['id']))
-        self.assertEqual(rs.rowcount,1,"Partial with Arguments returns 1 row.")
+        cur = f(1,options=dict(columns=['id']))
+        self.assertEqual(cur.rowcount,1,"Partial with Arguments returns 1 row.")
 
-        for row in rs:
+        for row in cur:
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
@@ -287,14 +287,14 @@ class RawTest(dbTest):
     def testRunQuery(self):
         r = Raw("select * from test_table where id = %s",['id'])
         try:
-            rs = r(1)
+            cur = r(1)
 
         except Exception, e:
             self.fail("Failed with exception %s" % e)
 
-        self.assertEqual(rs.rowcount, 1, "ResultSet has single entry.")
+        self.assertEqual(cur.rowcount, 1, "ResultSet has single entry.")
 
-        row = rs.fetchone()
+        row = cur.fetchone()
         self.assertEqual(row['id'],1,'Return row not 1, got %s' % row['id'])
         self.assertEqual(row['value'],'one', 'Return row not "one", got %s' % row['value'])
 
