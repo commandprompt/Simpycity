@@ -3,9 +3,7 @@ from simpycity import config
 from simpycity.core import Raw, Query, Function, FunctionSingle, FunctionTypedSingle
 from simpycity.model import SimpleModel, Construct
 from psycopg2.extensions import cursor as _cursor
-import psycopg2.pool
-from optparse import OptionParser
-import sys
+import psycopg2
 
 import ConfigParser
 

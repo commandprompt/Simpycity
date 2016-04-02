@@ -1,5 +1,5 @@
 from simpycity import NotFoundError
-from simpycity.core import Function, FunctionError, FunctionSingle
+from simpycity.core import FunctionError, FunctionSingle
 from simpycity import config as g_config
 import psycopg2
 
@@ -155,7 +155,7 @@ class SimpleModel(Construct):
             if args or kwargs:
                 self.__load_by_key__(*args, **kwargs)
 
-        if hasattr(self, 'lazyload') and isinstance(object.__getattribute__(self, 'lazyload'),Function) and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
+        if hasattr(self, 'lazyload') and isinstance(object.__getattribute__(self, 'lazyload'),FunctionSingle) and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
             self._loaded = True
         else:
             self._loaded = False

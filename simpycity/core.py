@@ -18,12 +18,9 @@ from psycopg2.errorcodes import *
 from psycopg2.extensions import cursor as _cursor
 #from psycopg2 import extras
 
-import re
-
 import config
-from handle import Handle
 
-from simpycity import InternalError, ProgrammingError
+from simpycity import ProgrammingError
 
 #from simpycity import exceptions
 

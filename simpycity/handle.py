@@ -1,10 +1,7 @@
 import psycopg2
 from psycopg2 import extras
 from simpycity import config as g_config
-import weakref
 from contextlib import contextmanager
-
-import simpycity
 
 def d_out(text):
 
