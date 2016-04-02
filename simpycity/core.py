@@ -59,7 +59,7 @@ class meta_query(object):
            Forcibly rolls back the handle.
     """
 
-    def __init__(self, name, args=[], return_type=None, handle=None, returns_a="single", callback=None):
+    def __init__(self, name, args=[], handle=None):
 
         """
 
@@ -95,10 +95,7 @@ class meta_query(object):
 
         self.query_base = name
         self.args = args
-        self.return_type = return_type
         self.__attr__ = {}
-        self.returns = returns_a
-        self.callback = callback
 
         self.__attr__['handle'] = handle
         self.cursor_factory = None #optionally override this
@@ -115,12 +112,6 @@ class meta_query(object):
         keys:
         * columns: Alters what columns are selected by the query.
         * handle: Overrides the stored handle with a customized version.
-        * fold_output/reduce: For single-row result sets, this will return only that
-            row as a tuple, instead of a tuple of tuples comprising the entire
-            set.
-            For a single-column, single-row result set, it will return only
-            that value, instead of a tuple of tuple.
-
         """
 
         d_out("meta_query.__call__: query is %s" % self.query_base)
@@ -138,10 +129,6 @@ class meta_query(object):
 
         columns = opts.pop('columns', [])
         handle = opts.pop('handle', None)
-        condense = opts.pop('reduce', False)
-        ret_type = opts.pop('return_type', self.return_type)
-        returns = opts.pop('returns_a', self.returns)
-        callback = opts.pop('callback', self.callback)
 
         if len(columns) >= 1:
             # we are limiting the return type.
@@ -202,19 +189,15 @@ class meta_query(object):
         for index,arg in enumerate(in_args):
             call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
-        rs = self.__execute__(cols, call_list, handle, condense, ret_type, returns, callback, extra_opt=opts)
-        d_out("meta_query.__call__: returning rs of %s" % rs)
-        return rs
+        cur = self.__execute__(cols, call_list, handle, extra_opt=opts)
+        d_out("meta_query.__call__: returning rs of %s" % cur)
+        return cur
 
 
     def form_query(self, columns, options={}):
         """Subclass function to create the query based on the columns
         provided at instance time."""
         pass
-
-    # def __repr__(self):
-    #     query = self.form_query("*")
-    #     return query
 
     def handle(self, handle):
 
@@ -223,10 +206,7 @@ class meta_query(object):
         """
         self.__attr__['handle'] = handle
 
-#    @exceptions.system
-#    @exceptions.base
-    def __execute__(self, columns, call_list, handle=None, condense=False, ret_type=None, returns=None, callback=None, extra_opt={}):
-
+    def __execute__(self, columns, call_list, handle=None, extra_opt={}):
         '''
         Runs the stored query based on the arguments provided to
         __call__.
@@ -250,7 +230,6 @@ class meta_query(object):
         d_out("meta_query.__execute__: Cursor is %s" % cursor)
         d_out("meta_query.__execute__: Query: %s" % ( query ) )
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
-
 
         try:
             cursor.execute(query, call_list)
