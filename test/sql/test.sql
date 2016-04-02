@@ -18,6 +18,11 @@ $body$
     SELECT * FROM test_table where id = $1;
 $body$ language sql;
 
+CREATE FUNCTION get_value (int) RETURNS text AS
+$body$
+    SELECT value FROM test_table where id = $1;
+$body$ language sql;
+
 CREATE FUNCTION test_nested (int) RETURNS nested AS
 $body$
     SELECT

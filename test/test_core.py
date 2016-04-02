@@ -185,6 +185,10 @@ class ModelTest(dbTest):
         )
         self.assertTrue(isinstance(model.others, list), 'model.others is a list')
 
+    def testProperty(self):
+        f = Property('get_value', ['id'])
+        value = f(1)
+        self.assertEqual(value, 'one', 'Property returns single object')
 
 class FunctionTest(dbTest):
 
