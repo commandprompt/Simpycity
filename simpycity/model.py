@@ -1,5 +1,5 @@
 from simpycity import NotFoundError
-from simpycity.core import FunctionError, FunctionSingle
+from simpycity.core import FunctionError, FunctionSingle, meta_query, Property
 from simpycity import config as g_config
 import psycopg2
 
@@ -63,19 +63,7 @@ class Construct(object):
         """
 
         attr = object.__getattribute__(self,name)
-        # This uses a try/catch because non-instance attributes (like
-        # __class__) will throw a TypeError if you try to use type(attr).mro().
-
-        mro = None
-        try:
-            mro = [x.__name__ for x in type(attr).mro()]
-            #d_out("Construct.__getattribute__: Found a conventional attribute")
-        except TypeError:
-            #d_out("Construct.__getattribute__: Found an uninstanced attribute")
-            mro = [x.__name__ for x in type(attr).mro(attr)]
-
-
-        if "meta_query" in mro:
+        if isinstance(attr, meta_query):
 
             d_out("Construct.__getattribute__: Found meta_query %s" % name)
             def instance(*args,**kwargs):
@@ -87,7 +75,6 @@ class Construct(object):
                 my_args['options']['handle'] = self.handle
                 return attr(**my_args)
             return instance
-
         else:
             return attr
             
@@ -244,18 +231,7 @@ class SimpleModel(Construct):
             attrs.update(loaded_attrs)
             return attrs[name]
 
-        # This uses a try/catch because non-instance attributes (like
-        # __class__) will throw a TypeError if you try to use type(attr).mro().
-
-        mro = None
-        try:
-            mro = [x.__name__ for x in type(attr).mro()]
-            #d_out("SimpleModel.__getattribute__: Found a conventional attribute %s" % name)
-        except TypeError:
-            #d_out("SimpleModel.__getattribute__: Found an uninstanced attribute")
-            mro = [x.__name__ for x in type(attr).mro(attr)]
-
-        if "meta_query" in mro:
+        if isinstance(attr, meta_query):
 
             d_out("SimpleModel.__getattribute__: Found meta_query %s" % name)
             def instance(*args,**kwargs):
@@ -288,7 +264,7 @@ class SimpleModel(Construct):
                 d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
                 return rs
 
-            if "Property" in mro:
+            if isinstance(attr, Property):
                 return instance()
             else:
                 return instance
