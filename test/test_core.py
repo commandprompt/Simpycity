@@ -166,6 +166,19 @@ class ModelTest(dbTest):
                 "Instance function test" )
             )
 
+    def testNestedModel(self):
+        handle = config.handle_factory()
+        SimpleLazyLoaderModel.register_composite('public.test_table', handle)
+        NestedModel.register_composite('public.nested', handle)
+        model = NestedModel(id=1)
+        self.assertTrue(isinstance(model, NestedModel), 'result row is registered class instance')
+        self.assertEqual(
+            model.value,
+            "one",
+            "Model value is not 'Test row', got %s" % model.value
+        )
+        self.assertTrue(isinstance(model.others, list), 'model.others is a list')
+
 
 class FunctionTest(dbTest):
 
@@ -213,12 +226,6 @@ class FunctionTest(dbTest):
                 pass
             except Exception, e:
                 self.fail("Failed with exception: %s" %e)
-
-
-    def testOutsideRange(self):
-        f = Function("test",['id'])
-        rs = f(4)
-        self.assertEqual(rs.rowcount,0,"Request outside range returns 0 rows.")
 
 
 class QueryTest(dbTest):
@@ -314,6 +321,10 @@ class SimpleLazyLoaderModel(SimpleReturn):
 class SimpleUpdateModel(SimpleLoaderModel):
 
     update = Function("update_row",['id','new_value'])
+
+class NestedModel(SimpleLazyLoaderModel):
+    table = SimpleLazyLoaderModel.table + ['others']
+    lazyload = FunctionSingle("test_nested",['id'])
 
 
 if __name__ == '__main__':

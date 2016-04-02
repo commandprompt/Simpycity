@@ -3,17 +3,31 @@ CREATE TABLE test_table (
     value text
 );
 
-CREATE FUNCTION test () RETURNS setof test_table AS 
+CREATE TYPE nested as (
+    base_ test_table,
+    others test_table[]
+);
+
+CREATE FUNCTION test () RETURNS setof test_table AS
 $body$
     SELECT * FROM test_table;
 $body$ language sql;
 
-CREATE FUNCTION test (int) RETURNS setof test_table AS 
+CREATE FUNCTION test (int) RETURNS test_table AS
 $body$
     SELECT * FROM test_table where id = $1;
 $body$ language sql;
 
-CREATE FUNCTION test_get (int) RETURNS setof test_table AS 
+CREATE FUNCTION test_nested (int) RETURNS nested AS
+$body$
+    SELECT
+        test($1),
+        array_agg(test(id)) as others
+    from test_table
+    where id <> $1;
+$body$ language sql;
+
+CREATE FUNCTION test_get (int) RETURNS test_table AS
 $body$
     SELECT * FROM test_table where id = $1;
 $body$ language sql;
