@@ -67,6 +67,12 @@ class TypedCursor(Cursor):
         rows = [_[0] for _ in rows]
         return rows
 
+    def __iter__(self):
+        res = super(TypedCursor, self).__iter__()
+        while True:
+            row = res.next()
+            yield row[0]
+
 
 class Handle(object):
 

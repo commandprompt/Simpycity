@@ -188,7 +188,7 @@ class ModelTest(dbTest):
             self.assertTrue(model.callback_attrib == callback_value, 'Function-initiallized callback was executed on row with id={0}'.format(model.id))
         callback_value = 'value two'
         cur = f(options={'callback': test_callback})
-        for model in cur.fetchall():
+        for model in cur:
             self.assertTrue(model.callback_attrib == callback_value, 'Function call callback was executed on row with id={0}'.format(model.id))
 
 
