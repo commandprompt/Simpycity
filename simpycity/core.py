@@ -15,14 +15,9 @@
 
 import psycopg2
 from psycopg2.errorcodes import *
-from psycopg2.extensions import cursor as _cursor
-#from psycopg2 import extras
-
 import config
-
 from simpycity import ProgrammingError
-
-#from simpycity import exceptions
+import simpycity.handle
 
 def d_out(text):
 
@@ -59,7 +54,7 @@ class meta_query(object):
            Forcibly rolls back the handle.
     """
 
-    def __init__(self, name, args=[], handle=None):
+    def __init__(self, name, args=[], handle=None, callback=None):
 
         """
 
@@ -71,26 +66,13 @@ class meta_query(object):
            args=[]  A base empty list, declaring the arguments, if any, that
                     this query requires.
 
-           return_type=  For use with the SimpleModel. Takes a SimpleModel as
-                         its argument, and maps all returned keys to the
-                         SimpleModel object.
-                         ** TODO **
-                         Make return_type work with *any* object.
-
            handle=  Instead of creating a new handle to run this query,
                     utilize the provided handle. This is handled implicitly
                     by the SimpleModel.
 
-           returns_a=   A specific setting for the reduce= option implemented
-                        during the execution stage. Specifically, certain
-                        queries can be declared to exist as always expecting
-                        the return of a list. In these cases, it is most sane
-                        to allow a simple flag to say "I expect a list.".
-
-           callback=  A callable to call on every fetched record.  Can
-                      be overriden on call-to-call basis via options= of the
-                      __call__ methond.
-
+           callback=  Each row returned by the cursor will be passed to this function, which must return the row.
+                      The function is applied to the psycopg row as returned by psycopg, before any other Simpycity handling.
+                      Can be overriden on call-to-call basis via options= of the  __call__ methond.
         """
 
         self.query_base = name
@@ -98,7 +80,8 @@ class meta_query(object):
         self.__attr__ = {}
 
         self.__attr__['handle'] = handle
-        self.cursor_factory = None #optionally override this
+        self.__attr__['callback'] = callback
+        self.cursor_factory = simpycity.handle.Cursor
 
     def __call__(self, *in_args, **in_kwargs):
 
@@ -112,6 +95,7 @@ class meta_query(object):
         keys:
         * columns: Alters what columns are selected by the query.
         * handle: Overrides the stored handle with a customized version.
+        * callback: Override the stored callback with a customized version.
         """
 
         d_out("meta_query.__call__: query is %s" % self.query_base)
@@ -128,7 +112,8 @@ class meta_query(object):
             opts = {}
 
         columns = opts.pop('columns', [])
-        handle = opts.pop('handle', None)
+        handle = opts.pop('handle', self.__attr__['handle'])
+        callback = opts.pop('callback', self.__attr__['callback'])
 
         if len(columns) >= 1:
             # we are limiting the return type.
@@ -189,8 +174,9 @@ class meta_query(object):
         for index,arg in enumerate(in_args):
             call_list[index] = arg
         d_out("meta_query.__call__: Handle is %s" % handle)
-        cur = self.__execute__(cols, call_list, handle, extra_opt=opts)
-        d_out("meta_query.__call__: returning rs of %s" % cur)
+        d_out("meta_query.__call__: callback is %s" % callback)
+        cur = self.__execute__(cols, call_list, handle, callback, extra_opt=opts)
+        d_out("meta_query.__call__: returning cur of %s" % cur)
         return cur
 
 
@@ -206,7 +192,7 @@ class meta_query(object):
         """
         self.__attr__['handle'] = handle
 
-    def __execute__(self, columns, call_list, handle=None, extra_opt={}):
+    def __execute__(self, columns, call_list, handle=None, callback=None, extra_opt={}):
         '''
         Runs the stored query based on the arguments provided to
         __call__.
@@ -226,7 +212,7 @@ class meta_query(object):
                 d_out("meta_query.__execute__: Found object handle.. ")
                 handle = self.__attr__['handle']
 
-        cursor = handle.cursor(cursor_factory=self.cursor_factory)
+        cursor = handle.cursor(cursor_factory=self.cursor_factory, callback=callback)
         d_out("meta_query.__execute__: Cursor is %s" % cursor)
         d_out("meta_query.__execute__: Query: %s" % ( query ) )
         d_out("meta_query.__execute__: Call List: %s" % ( call_list ) )
@@ -292,31 +278,6 @@ class Function(meta_query):
         return "SELECT %s %s %s" % (columns, from_cl, func)
 
 
-class TypedCursor(_cursor):
-    """
-    A cursor for result sets having only a single (typically composite) column.
-    Rather than a row being a tuple, it is simply the value of the one column.
-    """
-    def execute(self, query, vars=None):
-        super(TypedCursor, self).execute(query, vars)
-        if len(self.description) != 1:
-            raise Exception("Cursor must return exactly one column")
-
-    def fetchone(self):
-        row = super(TypedCursor, self).fetchone()
-        return row[0]
-
-    def fetchall(self):
-        rows = super(TypedCursor, self).fetchall()
-        rows = [_[0] for _ in rows]
-        return rows
-
-    def fetchmany(self, size=None):
-        rows = super(TypedCursor, self).fetchmany(size)
-        rows = [_[0] for _ in rows]
-        return rows
-
-
 class FunctionSingle(Function):
 
     def __call__(self, *in_args, **in_kwargs):
@@ -337,7 +298,7 @@ class FunctionTyped(Function):
         self.direct = True
         kwargs.pop('direct',None)
         super(Function, self).__init__(*args, **kwargs)
-        self.cursor_factory = TypedCursor
+        self.cursor_factory = simpycity.handle.TypedCursor
 
 
 class FunctionTypedSingle(FunctionSingle, FunctionTyped):

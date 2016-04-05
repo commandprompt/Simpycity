@@ -1,5 +1,4 @@
-import psycopg2
-from psycopg2 import extras
+import psycopg2.extras
 from simpycity import config as g_config
 from contextlib import contextmanager
 
@@ -7,6 +6,66 @@ def d_out(text):
 
     if g_config.debug:
         print text
+
+
+class Cursor(psycopg2.extras.DictCursor):
+    """
+    Add per-row callback option to standard cursor.
+    """
+    def __init__(self, *args, **kwargs):
+        self.callback = kwargs.pop('callback', None)
+        super(Cursor, self).__init__(*args, **kwargs)
+
+    def fetchone(self):
+        row = super(Cursor, self).fetchone()
+        if self.callback:
+            row = self.callback(row)
+        return row
+
+    def fetchall(self):
+        rows = super(Cursor, self).fetchall()
+        if self.callback:
+            rows = [self.callback(_) for _ in rows]
+        return rows
+
+    def fetchmany(self, size=None):
+        rows = super(Cursor, self).fetchmany(size)
+        if self.callback:
+            rows = [self.callback(_) for _ in rows]
+        return rows
+
+    def __iter__(self):
+        res = super(Cursor, self).__iter__()
+        while True:
+            if self.callback:
+                yield self.callback(res.next())
+            else:
+                yield res.next()
+
+
+class TypedCursor(Cursor):
+    """
+    A cursor for result sets having only a single (typically composite) column.
+    Rather than a row being a tuple, it is simply the value of the one column.
+    """
+    def execute(self, query, vars=None):
+        super(TypedCursor, self).execute(query, vars)
+        if len(self.description) != 1:
+            raise Exception("Cursor must return exactly one column")
+
+    def fetchone(self):
+        row = super(TypedCursor, self).fetchone()
+        return row[0]
+
+    def fetchall(self):
+        rows = super(TypedCursor, self).fetchall()
+        rows = [_[0] for _ in rows]
+        return rows
+
+    def fetchmany(self, size=None):
+        rows = super(TypedCursor, self).fetchmany(size)
+        rows = [_[0] for _ in rows]
+        return rows
 
 
 class Handle(object):
@@ -46,8 +105,13 @@ class Handle(object):
             raise Exception("Connection isn't open.")
 
         if 'cursor_factory' not in kwargs or kwargs['cursor_factory'] == None:
-            kwargs["cursor_factory"] = extras.DictCursor
-        return self.conn.cursor(*args,**kwargs)
+            kwargs["cursor_factory"] = Cursor
+        callback = kwargs.pop('callback', None)
+        cur = self.conn.cursor(*args,**kwargs)
+        if callback:
+            d_out('Handle.cursor() setting callback attrib {0}'.format(callback))
+            cur.callback = callback
+        return cur
 
     def execute(self, *args, **kwargs):
         return self.cursor().execute(*args, **kwargs)
@@ -128,7 +192,7 @@ class Handle(object):
         d_out("Handle.__del__: destroying handle, de-allocating connection")
         if self.conn:
             self.close()
-            
+
     @property
     def open(self):
         try:

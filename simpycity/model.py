@@ -197,7 +197,10 @@ class SimpleModel(Construct):
             rs = self.lazyload(options={'handle':self.handle})
             if not rs:
                 raise NotFoundError()
-            loaded_attrs = dict(rs)
+            if isinstance(rs, psycopg2.extras.DictRow):
+                loaded_attrs = dict(rs)
+            elif isinstance(rs, SimpleModel):
+                loaded_attrs = rs.__dict__
             SimpleModel.merge_base_attrs(loaded_attrs)
             attrs.update(loaded_attrs)
             return attrs[name]

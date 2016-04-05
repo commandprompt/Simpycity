@@ -172,6 +172,26 @@ class ModelTest(dbTest):
         for item in cur.fetchall():
             self.assertTrue(isinstance(item, SimpleReturn), 'Each "row" in FunctionTyped cursor result is a single model object')
 
+    def testFunctionCallback(self):
+        callback_value = 'value one'
+        def test_callback(row):
+            print('executing callback on row: {0}'.format(repr(row)))
+            model = row[0]
+            model.callback_attrib = callback_value
+            return row
+
+        handle = config.handle_factory()
+        SimpleReturn.register_composite('public.test_table', handle)
+        f = FunctionTyped('test',[], callback=test_callback)
+        cur = f()
+        for model in cur.fetchall():
+            self.assertTrue(model.callback_attrib == callback_value, 'Function-initiallized callback was executed on row with id={0}'.format(model.id))
+        callback_value = 'value two'
+        cur = f(options={'callback': test_callback})
+        for model in cur.fetchall():
+            self.assertTrue(model.callback_attrib == callback_value, 'Function call callback was executed on row with id={0}'.format(model.id))
+
+
     def testNestedModel(self):
         handle = config.handle_factory()
         SimpleLazyLoaderModel.register_composite('public.test_table', handle)
@@ -236,7 +256,6 @@ class FunctionTest(dbTest):
                 pass
             except Exception, e:
                 self.fail("Failed with exception: %s" %e)
-
 
 class QueryTest(dbTest):
 
