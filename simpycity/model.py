@@ -56,7 +56,9 @@ class SimpleModel(Construct):
     The basic simple model class.
     Implements the barest minimum of Model functionality to operate.
 
-    The SimpleModel expects a table=[] to declare its columns.
+    The SimpleModel expects a table=[] to declare its columns. However if you leave table an empty list and
+    define pg_type as a tuple of two members (schema, type) then
+    register_composite() will calculate table with a query to Postgres at runtime.
     SimpleModel expects one of:
     * __load__ to be a FunctionSingle that loads an instance, based on primary key, from the database.
     * lazyload to be a FunctionSingle that loads an instance from the database, depending on the existance of a value for
@@ -151,7 +153,6 @@ class SimpleModel(Construct):
 
         d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
         try:
-            # TODO: why list them explicitly in the table attribute?
             for item in self.table:
                 d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(row[item])))
                 self.__dict__[item] = row[item]
@@ -171,13 +172,9 @@ class SimpleModel(Construct):
         Private method.
 
         This function tests all attributes of the SimpleModel if they are
-        Simpycity base objects.
-        If they are a Simpycity object, columns from the Model are mapped
+        instances of meta_query.
+        If they are a meta_query, columns from the Model are mapped
         to the InstanceMethods' arguments, as appropriate.
-
-        Similar to Construct, a SimpleModel will also enforce all Simpycity
-        objects to use its Handle state, creating a singular transactional
-        entity.
         """
 
         attr = object.__getattribute__(self,name)
@@ -275,8 +272,9 @@ class SimpleModel(Construct):
     @classmethod
     def register_composite(cls, name, handle, factory=None):
         """
-        Maps a Postgresql type to this class.  Every time
-        a SQL function returns a registered type (including array
+        Maps a Postgresql type to this class.  If the class's table attribute
+        is empty, it is calculated and set by querying Postgres.
+        Every time a SQL function returns a registered type (including array
         elements and individual columns, recursively), this class
         will be instantiated automatically.
 

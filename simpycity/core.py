@@ -1,5 +1,5 @@
 """
-    COPYRIGHT 2009 Command Prompt, Inc.
+    COPYRIGHT 2009-2016 Command Prompt, Inc.
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation.
@@ -15,8 +15,8 @@
 
 import psycopg2
 from psycopg2.errorcodes import *
-import config
-from simpycity import ProgrammingError
+from simpycity import config, ProgrammingError
+#from simpycity import ProgrammingError
 import simpycity.handle
 
 def d_out(text):
@@ -27,31 +27,8 @@ def d_out(text):
 
 class meta_query(object):
 
-    """Base object for Simpycity.
-
-       Functions:
-         * __init__(self, name, args=[],return_type=None, handle=None):
-           Initializes the Simpycity object, as expected. Most classes need
-           to override and super() this function, to add additional logic
-           parsing to the query generator.
-
-         * __call__(self, *in_args,**in_args):
-           Heavy lifting. Takes the provided arguments (positional and keyword)
-           and correctly maps them to your query. Returns a ResultSet object
-           of your choice, optionally.
-
-         * form_query(self, columns):
-           Stub function, needs to be implemented by subclasses. Does what
-           little logic is necessary for the generation of a query.
-
-         * set_handle(self, handle):
-           Sets the handle used by the query object.
-
-         * commit(self):
-           Forcibly commits the handle
-
-         * rollback(self):
-           Forcibly rolls back the handle.
+    """
+    Base object for sql query-like objects For internal use only.
     """
 
     def __init__(self, name, args=[], handle=None, callback=None):
@@ -91,11 +68,11 @@ class meta_query(object):
         Calling the function in this method causes the core SQL to be run and
         a ResultSet returned.
 
-        It accepts an options/opt={} argument, which responds to the following
+        :param options: A dict, which responds to the following
         keys:
         * columns: Alters what columns are selected by the query.
-        * handle: Overrides the stored handle with a customized version.
-        * callback: Override the stored callback with a customized version.
+        * handle: Overrides the instance handle with a customized version.
+        * callback: Override the instance callback with a customized version.
         """
 
         d_out("meta_query.__call__: query is %s" % self.query_base)
@@ -194,8 +171,11 @@ class meta_query(object):
 
     def __execute__(self, columns, call_list, handle=None, callback=None, extra_opt={}):
         '''
-        Runs the stored query based on the arguments provided to
+        Runs the stored query in a psycopg2 cursor based on the arguments provided to
         __call__.
+        If the instance handle is None and also the handle parameter is none, a handle
+        is created from config.handle_factory().
+        :param extra_opt: a dict passed to form_query
         '''
 
         query = self.form_query(columns, options=extra_opt)
@@ -249,17 +229,24 @@ class meta_query(object):
 
 
 class Function(meta_query):
-
+    """
+    Abstract a Postgresql function.
+    """
     def __init__(self, *args, **kwargs):
         """
-        direct=  perform direct query "SELECT func(args...)" when True,
+        :param name: sql function name
+        :param args: list of sql argument names
+        :param direct: perform direct query "SELECT func(args...)" when True,
                  vs. "SELECT * FROM func(args...)" when False (default.)
         """
         self.direct = kwargs.pop('direct', False)
         super(Function, self).__init__(*args, **kwargs)
 
     def form_query(self, columns, options={}):
-
+        """
+        :param columns: literal sql string for list of columns
+        :param options: dict supporting a single key "direct" as in the constructor
+        """
         from_cl = 'FROM'
 
         direct = options.get('direct', self.direct)
@@ -279,7 +266,9 @@ class Function(meta_query):
 
 
 class FunctionSingle(Function):
-
+    """
+    A Postgresql function that returns a single value.
+    """
     def __call__(self, *in_args, **in_kwargs):
 #         if 'options' not in in_kwargs:
 #             in_kwargs['options'] = {}
@@ -292,7 +281,7 @@ class FunctionSingle(Function):
 
 
 class FunctionTyped(Function):
-    """Expect the result set to have only a single (typically composite) column"""
+    """A Postgresql function that returns row(s) having only a single (typically composite) column"""
 
     def __init__(self, *args, **kwargs):
         self.direct = True
@@ -302,21 +291,48 @@ class FunctionTyped(Function):
 
 
 class FunctionTypedSingle(FunctionSingle, FunctionTyped):
-    """Expect the result set to be a single row with a single (typically composite) column"""
+    """A Postgresql function that returns a single row having a single (typically composite) column"""
     pass
 
-# enjoys special handling in SimpleModel.__getattribute__
 class Property(FunctionTypedSingle):
+    """
+    Enjoys special handling in SimpleModel.__getattribute__
+    When a SimpleModel attribute references an instance of this class, its __call__
+    attribute is executed immediately and the result returned. That means in
+    __init__, args must be empty.
+    """
     pass
 
 
 class Raw(meta_query):
+    """
+    Execute arbitrary sql.
+    """
+    def __init__(self, name, args=[], handle=None, callback=None):
+        """
+        :param name: The raw sql
+        :param args: noop
+        :param handle: see superclass
+        :param callback: see superclass
+        """
+        super(Raw, self).__init__(name, args, handle, callback)
 
     def form_query(self, columns, options={}):
-
+        #TODO: use args for parameterized query
         return self.query_base
 
 class Query(meta_query):
+    """
+    select query access to a Postgresql table or view.
+    """
+    def __init__(self, name, args=[], handle=None, callback=None):
+        """
+        :param name: table or view name
+        :param args: list of column names used in sql WHERE clause
+        :param handle: see superclass
+        :param callback: see superclass
+        """
+        super(Query, self).__init__(name, args, handle, callback)
 
     def form_query(self, columns, options={}):
         where_list = None

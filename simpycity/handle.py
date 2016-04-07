@@ -78,7 +78,7 @@ class Handle(object):
 
     """
     A base Simpycity handle.
-    a Handle is the wrapper object around a
+    a Handle is the wrapper object around a psycopg connection.
     """
 
     def __init__(self, dsn=None, config=None, isolation_level=None):

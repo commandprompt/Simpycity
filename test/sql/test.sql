@@ -37,6 +37,11 @@ $body$
     SELECT * FROM test_table where id = $1;
 $body$ language sql;
 
+CREATE FUNCTION test_constant() returns int AS
+$body$
+    select 1;
+$body$ language sql;
+
 INSERT INTO test_table values (1, 'one');
 INSERT INTO test_table values (2, 'two');
 INSERT INTO test_table values (3, 'three');
