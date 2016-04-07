@@ -35,19 +35,19 @@ class meta_query(object):
 
         """
 
-         * name=    Sets the base name of the query. How this is used will be
+         :name    Sets the base name of the query. How this is used will be
                     declared in the implementing subclass. For instance, in
                     the Function subclass, name is the name of the stored
                     procedure itself. In the case of Raw, it is the entire
                     query.
-           args=[]  A base empty list, declaring the arguments, if any, that
+         :args    A base empty list, declaring the arguments, if any, that
                     this query requires.
 
-           handle=  Instead of creating a new handle to run this query,
+         :handle   Instead of creating a new handle to run this query,
                     utilize the provided handle. This is handled implicitly
                     by the SimpleModel.
 
-           callback=  Each row returned by the cursor will be passed to this function, which must return the row.
+         :callback  Each row returned by the cursor will be passed to this function, which must return the row.
                       The function is applied to the psycopg row as returned by psycopg, before any other Simpycity handling.
                       Can be overriden on call-to-call basis via options= of the  __call__ methond.
         """
@@ -73,6 +73,7 @@ class meta_query(object):
         * columns: Alters what columns are selected by the query.
         * handle: Overrides the instance handle with a customized version.
         * callback: Override the instance callback with a customized version.
+        :return psycopg2 cursor
         """
 
         d_out("meta_query.__call__: query is %s" % self.query_base)
@@ -159,7 +160,9 @@ class meta_query(object):
 
     def form_query(self, columns, options={}):
         """Subclass function to create the query based on the columns
-        provided at instance time."""
+        provided at instance time.
+        :return sql string
+        """
         pass
 
     def handle(self, handle):
@@ -176,6 +179,7 @@ class meta_query(object):
         If the instance handle is None and also the handle parameter is none, a handle
         is created from config.handle_factory().
         :param extra_opt: a dict passed to form_query
+        :return psycopg2 cursor
         '''
 
         query = self.form_query(columns, options=extra_opt)
@@ -246,6 +250,7 @@ class Function(meta_query):
         """
         :param columns: literal sql string for list of columns
         :param options: dict supporting a single key "direct" as in the constructor
+        :return sql string
         """
         from_cl = 'FROM'
 
@@ -270,9 +275,6 @@ class FunctionSingle(Function):
     A Postgresql function that returns a single value.
     """
     def __call__(self, *in_args, **in_kwargs):
-#         if 'options' not in in_kwargs:
-#             in_kwargs['options'] = {}
-#         in_kwargs['options']['reduce'] = True
         cursor = super(FunctionSingle, self).__call__(*in_args, **in_kwargs)
         if cursor.rowcount <> 1:
             raise Exception("Expect only a single row")
@@ -301,7 +303,8 @@ class Property(FunctionTypedSingle):
     attribute is executed immediately and the result returned. That means in
     __init__, args must be empty.
     """
-    pass
+    def __init__(self, name, handle=None, callback=None):
+        super(Property, self).__init__(name, [], handle, callback)
 
 
 class Raw(meta_query):

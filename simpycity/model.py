@@ -273,7 +273,8 @@ class SimpleModel(Construct):
     def register_composite(cls, name, handle, factory=None):
         """
         Maps a Postgresql type to this class.  If the class's table attribute
-        is empty, it is calculated and set by querying Postgres.
+        is empty, and the class has an attribute pg_type of tuple (schema, type),
+        it is calculated and set by querying Postgres.
         Every time a SQL function returns a registered type (including array
         elements and individual columns, recursively), this class
         will be instantiated automatically.
