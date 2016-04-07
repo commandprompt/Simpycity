@@ -206,9 +206,15 @@ class ModelTest(dbTest):
         self.assertTrue(isinstance(model.others, list), 'model.others is a list')
 
     def testProperty(self):
-        f = Property('get_value', ['id'])
-        value = f(1)
-        self.assertEqual(value, 'one', 'Property returns single object')
+        model = SimpleInstanceModel(id=1)
+        self.assertEqual(model.prop, 1, 'Property returns single object')
+
+    def testDynamicModel(self):
+        handle = config.handle_factory()
+        DynamicModel.register_composite('public.test_table', handle)
+        model = DynamicModel()
+        self.assertEqual(model.table, SimpleReturn.table, 'table is determined automatically')
+
 
 class FunctionTest(dbTest):
 
@@ -339,6 +345,7 @@ class SimpleInstanceModel(SimpleModel):
     table = ['id','value']
 
     get = Function("test_get",['id'])
+    prop = Property('test_constant')
 
 class SimpleLoaderModel(SimpleInstanceModel):
     __load__ = FunctionSingle("test_get",['id'])
@@ -355,6 +362,9 @@ class NestedModel(SimpleLazyLoaderModel):
     table = SimpleLazyLoaderModel.table + ['others']
     lazyload = FunctionSingle("test_nested",['id'])
 
+class DynamicModel(SimpleModel):
+    table = []
+    pg_type = ('public','test_table')
 
 if __name__ == '__main__':
     setUpModule()
