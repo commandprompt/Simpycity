@@ -149,18 +149,22 @@ class ModelTest(dbTest):
         )
 
     def testInstanceFunctions(self):
-        q = SimpleUpdateModel(id=1)
-        cur = q.update(new_value="Instance function test")
+        model = SimpleInstanceModel(id=1)
+        cur = model.get()
+        row = cur.fetchone()
+        self.assertEqual(row[0], 1, 'missing Function argument supplied implicitly')
+        model = SimpleUpdateModel(id=1)
+        cur = model.update(new_value="Instance function test")
         # Now, the rs should have returned a single row
         self.assertEquals(cur.rowcount,1,"Update returned a single row.")
         row = cur.fetchone()
         self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
-        f = SimpleUpdateModel(id=1)
+        model = SimpleUpdateModel(id=1)
         self.assertEqual(
-            f.value,
+            model.value,
             "Instance function test",
             "Key was not successfully set, got '%s', expected '%s'" % (
-                f.value,
+                model.value,
                 "Instance function test" )
             )
 
