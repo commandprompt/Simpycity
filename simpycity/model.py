@@ -117,7 +117,7 @@ class SimpleModel(Construct):
             if args or kwargs:
                 self.__load_by_key__(*args, **kwargs)
 
-        if hasattr(self, 'lazyload') and isinstance(object.__getattribute__(self, 'lazyload'),FunctionSingle) and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
+        if hasattr(self, '__lazyload__') and isinstance(object.__getattribute__(self, '__lazyload__'),FunctionSingle) and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
             self._loaded = True
         else:
             self._loaded = False
@@ -185,7 +185,7 @@ class SimpleModel(Construct):
             return attr
 
         if attr is None and name in object.__getattribute__(self, 'table') and not object.__getattribute__(self,'_loaded'):
-            should_lazyload = hasattr(self,'lazyload')
+            should_lazyload = hasattr(self,'__lazyload__')
         else:
             should_lazyload = False
 
@@ -193,7 +193,7 @@ class SimpleModel(Construct):
             d_out("lazyloading {0} on {1}".format(self.__class__, name))
             attrs = object.__getattribute__(self, '__dict__')
             attrs['_loaded'] = True
-            rs = self.lazyload(options={'handle':self.handle})
+            rs = self.__lazyload__(options={'handle':self.handle})
             if not rs:
                 raise NotFoundError()
             if isinstance(rs, psycopg2.extras.DictRow):

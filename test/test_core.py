@@ -355,7 +355,7 @@ class SimpleLoaderModel(SimpleInstanceModel):
     __load__ = FunctionSingle("test_get",['id'])
 
 class SimpleLazyLoaderModel(SimpleReturn):
-    lazyload = FunctionSingle("test_get",['id'])
+    __lazyload__ = FunctionSingle("test_get",['id'])
     loaded_indicator = 'value'
 
 class SimpleUpdateModel(SimpleLoaderModel):
@@ -364,7 +364,7 @@ class SimpleUpdateModel(SimpleLoaderModel):
 
 class NestedModel(SimpleLazyLoaderModel):
     table = SimpleLazyLoaderModel.table + ['others']
-    lazyload = FunctionSingle("test_nested",['id'])
+    __lazyload__ = FunctionSingle("test_nested",['id'])
 
 class DynamicModel(SimpleModel):
     table = []
