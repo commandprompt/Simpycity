@@ -158,6 +158,15 @@ class meta_query(object):
         return cur
 
 
+    @property
+    def is_property(self):
+        """
+        Override this for special handling in SimpleModel.__getattribute__
+        If True, __call__ will be executed if a reference is made to a SimpleModel attribute
+        that is this instance.
+        """
+        return False
+
     def form_query(self, columns, options={}):
         """Subclass function to create the query based on the columns
         provided at instance time.
@@ -301,10 +310,12 @@ class Property(FunctionTypedSingle):
     Enjoys special handling in SimpleModel.__getattribute__
     When a SimpleModel attribute references an instance of this class, its __call__
     attribute is executed immediately and the result returned. That means in
-    __init__, args must be empty.
+    __init__, args must be empty, or the args must be mappable by name to the model's table attribute.
     """
-    def __init__(self, name, handle=None, callback=None):
-        super(Property, self).__init__(name, [], handle, callback)
+
+    @property
+    def is_property(self):
+        return True
 
 
 class Raw(meta_query):
