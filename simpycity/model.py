@@ -66,6 +66,8 @@ class SimpleModel(Construct):
 
     """
 
+    pg_type = None
+
     def __init__(self, *args, **kwargs):
         """
         Sets up the objects' internal column.
@@ -197,7 +199,11 @@ class SimpleModel(Construct):
             if isinstance(rs, psycopg2.extras.DictRow):
                 loaded_attrs = dict(rs)
             elif isinstance(rs, SimpleModel):
-                loaded_attrs = rs.__dict__
+                #python 2.7+:
+                #loaded_attrs = {_ for _ in rs.__dict__.iteritems() if _[0] in self.table}
+                loaded_attrs = {}
+                for col in self.table:
+                    loaded_attrs[col] = rs.__dict__[col]
             SimpleModel.merge_base_attrs(loaded_attrs)
             attrs.update(loaded_attrs)
             return attrs[name]
@@ -235,7 +241,7 @@ class SimpleModel(Construct):
                 d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
                 return rs
 
-            if isinstance(attr, Property):
+            if attr.is_property:
                 return instance()
             else:
                 return instance
