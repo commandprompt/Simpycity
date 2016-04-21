@@ -111,16 +111,16 @@ class SimpleModel(Construct):
         # should automatically pick up config= and handle=
         super(SimpleModel, self).__init__(config, handle, *args, **kwargs)
 
-        # config and handle have been dealt with, now.
-        if hasattr(self, '__load__'):
-
-            if args or kwargs:
-                self.__load_by_key__(*args, **kwargs)
-
-        if hasattr(self, '__lazyload__') and isinstance(object.__getattribute__(self, '__lazyload__'),FunctionSingle) and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
+        if hasattr(self, 'loaded_indicator') and self.__dict__.get(object.__getattribute__(self, 'loaded_indicator')) is not None:
             self._loaded = True
         else:
             self._loaded = False
+
+        # config and handle have been dealt with, now.
+        if not self._loaded and hasattr(self, '__load__'):
+            if args or kwargs:
+                self.__load_by_key__(*args, **kwargs)
+
 
     def __load_by_key__(self, *args, **kwargs):
         """
@@ -137,12 +137,10 @@ class SimpleModel(Construct):
             opts = {}
 
         opts['handle'] = self.handle
-        #opts['reduce'] = True
 
         kwargs['options'] = opts
-        kwargs['options']['reduce'] = True
 
-        rs = None
+        row = None
         try:
             row = self.__load__(*args, **kwargs)
         except psycopg2.InternalError, e:
@@ -153,20 +151,23 @@ class SimpleModel(Construct):
         if row is None:
             raise NotFoundError()
 
-        d_out("SimpleModel.__load_by_key__: rs: %s" % rs)
-        try:
-            for item in self.table:
-                d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(row[item])))
-                self.__dict__[item] = row[item]
-            d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
-            self._loaded = True
-        except TypeError, e:
-            # We can assume that we've been given a single record that
-            # cannot be subscripted. Therefore, we'll set it to the first
-            # value in self.table
-            d_out("Simplemodel.__load_by_key__: TypeError: %s" % e)
-            self.__setattr__(self.table[0], row)
-            raise
+        d_out("SimpleModel.__load_by_key__: rs: %s" % row)
+        if isinstance(row, psycopg2.extras.DictRow):
+            loaded_attrs = dict(row)
+        elif isinstance(row, SimpleModel):
+            #python 2.7+:
+            #loaded_attrs = {_ for _ in rs.__dict__.iteritems() if _[0] in self.table}
+            loaded_attrs = {}
+            for col in self.table:
+                loaded_attrs[col] = row.__dict__[col]
+        else:
+            raise Exception("row is type {0}".format(type(row)))
+        SimpleModel.merge_base_attrs(loaded_attrs)
+        for item in self.table:
+            d_out("SimpleModel.__load_by_key__: %s during load is %s" % (item, repr(loaded_attrs[item])))
+            self.__dict__[item] = loaded_attrs[item]
+        self._loaded = True
+        d_out("SimpleModel.__load_by_key__: self.__dict__ is %s" % self.__dict__)
 
     def __getattribute__(self,name):
 
