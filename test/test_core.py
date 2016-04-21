@@ -141,6 +141,15 @@ class ModelTest(dbTest):
             "Model value is not 'Test row', got %s" % q.value
         )
 
+    def testQueryTyped(self):
+        handle = config.handle_factory()
+        QueryTypedModel.register_composite('public.test_table', handle)
+        model = QueryTypedModel(id=1, handle=handle)
+        self.assertEqual(model.value, 'one', 'QueryTypedModel loads correctly')
+        cur = model.get(id=2, options={'handle': handle})
+        o = cur.fetchone()
+        self.assertEqual(o.value, 'two', 'QueryTyped returns correctly')
+
     def testLazyLoad(self):
         model = SimpleLazyLoaderModel(id=1)
         self.assertEqual(
@@ -369,6 +378,11 @@ class SimpleLoaderModel(SimpleInstanceModel):
 
 class QueryLoaderModel(SimpleInstanceModel):
     __load__ = QuerySingle("test_table",['id'])
+
+class QueryTypedModel(SimpleInstanceModel):
+    __load__ = QueryTypedSingle("test_table",['id'])
+    loaded_indicator = 'value'
+    get = QueryTyped("test_table",['id'])
 
 class SimpleLazyLoaderModel(SimpleReturn):
     __lazyload__ = FunctionSingle("test_get",['id'])

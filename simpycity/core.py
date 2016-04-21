@@ -293,9 +293,9 @@ class FunctionTyped(Function):
     """A Postgresql function that returns row(s) having only a single (typically composite) column"""
 
     def __init__(self, *args, **kwargs):
-        self.direct = True
         kwargs.pop('direct',None)
-        super(Function, self).__init__(*args, **kwargs)
+        super(FunctionTyped, self).__init__(*args, **kwargs)
+        self.direct = True
         self.cursor_factory = simpycity.handle.TypedCursor
 
 
@@ -345,6 +345,7 @@ class Query(meta_query):
         :param callback: see superclass
         """
         super(Query, self).__init__(name, args, handle, callback)
+        self.direct = False
 
     def form_query(self, columns, options={}):
         where_list = None
@@ -378,9 +379,9 @@ class QueryTyped(Query):
     """A select query on a table or view that returns composite row values"""
 
     def __init__(self, *args, **kwargs):
-        self.direct = True
         kwargs.pop('direct',None)
         super(QueryTyped, self).__init__(*args, **kwargs)
+        self.direct = True
         self.cursor_factory = simpycity.handle.TypedCursor
 
 
