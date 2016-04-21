@@ -128,6 +128,19 @@ class ModelTest(dbTest):
             "Model value is not 'Test row', got %s" % q.value
         )
 
+    def testQueryLoader(self):
+        q = QueryLoaderModel(1)
+        self.assertEqual(
+            q.id,
+            1,
+            "Model id is set to 1."
+        )
+        self.assertEqual(
+            q.value,
+            "one",
+            "Model value is not 'Test row', got %s" % q.value
+        )
+
     def testLazyLoad(self):
         model = SimpleLazyLoaderModel(id=1)
         self.assertEqual(
@@ -353,6 +366,9 @@ class SimpleInstanceModel(SimpleModel):
 
 class SimpleLoaderModel(SimpleInstanceModel):
     __load__ = FunctionSingle("test_get",['id'])
+
+class QueryLoaderModel(SimpleInstanceModel):
+    __load__ = QuerySingle("test_table",['id'])
 
 class SimpleLazyLoaderModel(SimpleReturn):
     __lazyload__ = FunctionSingle("test_get",['id'])

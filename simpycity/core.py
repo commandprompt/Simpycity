@@ -359,6 +359,18 @@ class Query(meta_query):
 
         return query
 
+class QuerySingle(Query):
+    """
+    A Postgresql function that returns a single value.
+    """
+    def __call__(self, *in_args, **in_kwargs):
+        cursor = super(QuerySingle, self).__call__(*in_args, **in_kwargs)
+        if cursor.rowcount <> 1:
+            raise Exception("Expect only a single row")
+        row = cursor.fetchone()
+        return row
+
+
 class FunctionError(BaseException):
     """
     Bare exception, used for naming purposes only.

@@ -60,8 +60,8 @@ class SimpleModel(Construct):
     define pg_type as a tuple of two members (schema, type) then
     register_composite() will calculate table with a query to Postgres at runtime.
     SimpleModel expects one of:
-    * __load__ to be a FunctionSingle that loads an instance, based on primary key, from the database.
-    * lazyload to be a FunctionSingle that loads an instance from the database, depending on the existance of a value for
+    * __load__ to be a FunctionSingle or QuerySingle that loads an instance, based on primary key, from the database.
+    * __lazyload__ to be a FunctionSingle that loads an instance from the database, depending on the existance of a value for
       loaded_indicator, which should be a member of table that will only be populated after the instance is fully loaded.
 
     """
