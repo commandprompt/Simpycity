@@ -14,9 +14,7 @@
 """
 
 import psycopg2
-from psycopg2.errorcodes import *
 from simpycity import config, ProgrammingError
-#from simpycity import ProgrammingError
 import simpycity.handle
 
 def d_out(text):
@@ -353,7 +351,12 @@ class Query(meta_query):
         if len(self.args) >= 1:
             where_list = [x+"=%s" for x in self.args]
 
-        query = "SELECT " + columns + " FROM " + self.query_base
+        if self.direct:
+            if columns != '*':
+                raise ProgrammingError("Column lists cannot be specified for a typed query call.")
+            columns = 'row(t.*)::{base}'.format(base=self.query_base)
+
+        query = "SELECT {columns} FROM {base} t".format(columns=columns, base=self.query_base)
         if where_list:
             query += " WHERE " + " AND ".join(where_list)
 
@@ -361,7 +364,7 @@ class Query(meta_query):
 
 class QuerySingle(Query):
     """
-    A Postgresql function that returns a single value.
+    A select query on a table or view that returns a single row
     """
     def __call__(self, *in_args, **in_kwargs):
         cursor = super(QuerySingle, self).__call__(*in_args, **in_kwargs)
@@ -370,6 +373,20 @@ class QuerySingle(Query):
         row = cursor.fetchone()
         return row
 
+
+class QueryTyped(Query):
+    """A select query on a table or view that returns composite row values"""
+
+    def __init__(self, *args, **kwargs):
+        self.direct = True
+        kwargs.pop('direct',None)
+        super(QueryTyped, self).__init__(*args, **kwargs)
+        self.cursor_factory = simpycity.handle.TypedCursor
+
+
+class QueryTypedSingle(QuerySingle, QueryTyped):
+    """A select query on a table or view that returns a single composite row value"""
+    pass
 
 class FunctionError(BaseException):
     """
