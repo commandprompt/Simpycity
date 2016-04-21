@@ -276,7 +276,7 @@ class SimpleModel(Construct):
             raise NotImplementedError("Cannot save without __save__ declaration.")
 
     @classmethod
-    def register_composite(cls, name, handle, factory=None):
+    def register_composite(cls, name, handle=None, factory=None):
         """
         Maps a Postgresql type to this class.  If the class's table attribute
         is empty, and the class has an attribute pg_type of tuple (schema, type),
@@ -314,7 +314,8 @@ FROM
             AND attnum > 0 AND NOT attisdropped
         ORDER BY attnum
     ) sub;"""
-
+        if handle is None:
+            handle = g_config.handle_factory()
         if len(cls.table) == 0 and cls.pg_type is not None:
             cursor = handle.cursor()
             cursor.execute(PG_TYPE_SQL, cls.pg_type)
