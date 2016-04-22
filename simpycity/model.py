@@ -106,6 +106,7 @@ class SimpleModel(Construct):
         #
         if hasattr(self, 'table'):
             for name in self.table:
+                d_out("SimpleModel.__init__: table member: {0}".format(name))
                 self.__dict__[name] = kwargs.get(name, None)
 
         # should automatically pick up config= and handle=
@@ -317,11 +318,17 @@ FROM
     ) sub;"""
         if handle is None:
             handle = g_config.handle_factory()
-        if len(cls.table) == 0 and cls.pg_type is not None:
-            cursor = handle.cursor()
-            cursor.execute(PG_TYPE_SQL, cls.pg_type)
-            row = cursor.fetchone()
-            cls.table = row[0]
+        d_out("SimpleModel.register_composite: before: table for {0} is {1}".format(repr(cls.pg_type), cls.table))
+        if cls.pg_type is not None:
+            super_table = cls.__mro__[1].table if hasattr(cls.__mro__[1], 'table') else []
+            if cls.table == [] or cls.table is super_table:
+                cursor = handle.cursor()
+                cursor.execute(PG_TYPE_SQL, cls.pg_type)
+                row = cursor.fetchone()
+                d_out("SimpleModel.register_composite: row={0}".format(row))
+                row[0] = [_ for _ in row[0] if _ != 'base_']
+                cls.table = cls.table + row[0]
+                d_out("SimpleModel.register_composite: after: table for {0} is {1}".format(repr(cls.pg_type), cls.table))
         if factory is None:
             factory = CustomCompositeCaster
         return psycopg2.extras.register_composite(
@@ -343,5 +350,6 @@ FROM
         """
         base = attrs.pop('base_', None)
         if base:
+            d_out("SimpleModel.merge_base_attrs: base.table={0}".format(base.table))
             for name in base.table:
                 attrs[name] = base.__dict__[name]
