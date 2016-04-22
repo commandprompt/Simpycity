@@ -7,8 +7,8 @@ except ImportError:
 
 setup(
     name='Simpycity',
-    version='1.0',
-    description='A simple functionally-oriented PostgreSQL DB access library.',
+    version='2.0',
+    description='A database-respecting object-relational mapper for PostgreSQL.',
     author='Commandprompt, Inc.',
     author_email='support@commandprompt.com',
     url='https://github.com/commandprompt/Simpycity',
