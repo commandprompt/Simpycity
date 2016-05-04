@@ -67,6 +67,7 @@ class SimpleModel(Construct):
     """
 
     pg_type = None
+    table = []
 
     def __init__(self, *args, **kwargs):
         """
@@ -106,7 +107,6 @@ class SimpleModel(Construct):
         #
         if hasattr(self, 'table'):
             for name in self.table:
-                d_out("SimpleModel.__init__: table member: {0}".format(name))
                 self.__dict__[name] = kwargs.get(name, None)
 
         # should automatically pick up config= and handle=
@@ -206,6 +206,8 @@ class SimpleModel(Construct):
                 loaded_attrs = {}
                 for col in self.table:
                     loaded_attrs[col] = rs.__dict__[col]
+            else:
+                raise Exception("__lazyload__ returned unexpected type: {0}".format(type(rs)))
             SimpleModel.merge_base_attrs(loaded_attrs)
             attrs.update(loaded_attrs)
             return attrs[name]
@@ -219,7 +221,7 @@ class SimpleModel(Construct):
                     raise FunctionError("This function can only take keyword arguments.")
                 my_args = kwargs.copy()
                 d_out("SimpleModel.__getattribute__ InstanceMethod: kwargs: %s" % repr(kwargs))
-                d_out("SimpleModel.__getattribute__ self.__dict__: %s" % self.__dict__)
+                d_out("SimpleModel.__getattribute__ InstanceMethod: self.__dict__: %s" % self.__dict__)
                 for arg in attr.args:
                     d_out("SimpleModel.__getattribute__ InstanceMethod: checking arg %s" % arg)
                     if arg not in kwargs:
@@ -231,16 +233,16 @@ class SimpleModel(Construct):
                             my_args[arg] = None
 
                 if 'options' not in kwargs:
-                    d_out("SimpleModel.__getattribute__: Didn't find options.")
+                    d_out("SimpleModel.__getattribute__ InstanceMethod: Didn't find options.")
                     my_args['options'] = {}
 
                 # pass self to the query object
                 my_args['options']['model'] = self
 
-                d_out("SimpleModel.__getattribute__: Setting handle.")
+                d_out("SimpleModel.__getattribute__: InstanceMethod: Setting handle.")
                 my_args['options']['handle'] = self.handle
                 rs = attr(*args, **my_args)
-                d_out("SimpleModel.__getattribute__: attr returned rs of %s" %rs)
+                d_out("SimpleModel.__getattribute__: InstanceMethod: {0} ({1}) constructor returned {2}".format(name, attr, rs))
                 return rs
 
             if attr.is_property:
@@ -282,7 +284,8 @@ class SimpleModel(Construct):
         """
         Maps a Postgresql type to this class.  If the class's table attribute
         is empty, and the class has an attribute pg_type of tuple (schema, type),
-        it is calculated and set by querying Postgres.
+        it is calculated and set by querying Postgres. Register inherited/inheriting
+        classes in heirarchical order.
         Every time a SQL function returns a registered type (including array
         elements and individual columns, recursively), this class
         will be instantiated automatically.

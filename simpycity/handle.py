@@ -55,7 +55,10 @@ class TypedCursor(Cursor):
 
     def fetchone(self):
         row = super(TypedCursor, self).fetchone()
-        return row[0]
+        if row and len(row) > 0:
+            return row[0]
+        else:
+            return row
 
     def fetchall(self):
         rows = super(TypedCursor, self).fetchall()
@@ -71,7 +74,10 @@ class TypedCursor(Cursor):
         res = super(TypedCursor, self).__iter__()
         while True:
             row = res.next()
-            yield row[0]
+            if row and len(row) > 0:
+                yield row[0]
+            else:
+                yield row
 
 
 class Handle(object):

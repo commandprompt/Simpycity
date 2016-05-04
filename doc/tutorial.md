@@ -125,18 +125,21 @@ because each _mammal_ is now an instance of _Animal_, not a psycopg2 DictRow. If
         SELECT * FROM animal where id = 1;
     $body$ language sql;
 
-    human = simpycity.core.Property('public.human', [])
+    class Animal(simpycity.model.SimpleModel):
+        ...
+        master = simpycity.core.Property('public.human', [])
 
-    print(human.species)
+    animal = animals.Animal(id=3)
+    print(animal.master.species)
     >>>sapiens
 
 Automatic Table Attribute
 -------------------------
 
-Because psycopg2 is deeply familiar with PostgreSQL, we can leverage type mapping so that figuring the _table_ attribute, ie. list of column names, is completely automatic. In our _Animal_ class we add a class attribute _pg_type_, and then change _table_ to an empty list:
+Because psycopg2 is deeply familiar with PostgreSQL, we can leverage type mapping so that figuring the _table_ attribute, ie. list of column names, is completely automatic. In our _Animal_ class we add a class attribute _pg_type_, and then omit _table_:
 
     pg_type = ('public', 'animal')
-    table = []
+    #table = []
 
 The script output will remain identical.
 
