@@ -197,7 +197,7 @@ class SimpleModel(Construct):
             attrs['_loaded'] = True
             rs = self.__lazyload__(options={'handle':self.handle})
             if not rs:
-                raise NotFoundError()
+                raise NotFoundError("__lazyload__ returned: {0}".format(rs))
             if isinstance(rs, psycopg2.extras.DictRow):
                 loaded_attrs = dict(rs)
             elif isinstance(rs, SimpleModel):
@@ -242,7 +242,7 @@ class SimpleModel(Construct):
                 d_out("SimpleModel.__getattribute__: InstanceMethod: Setting handle.")
                 my_args['options']['handle'] = self.handle
                 rs = attr(*args, **my_args)
-                d_out("SimpleModel.__getattribute__: InstanceMethod: {0} ({1}) constructor returned {2}".format(name, attr, rs))
+                d_out("SimpleModel.__getattribute__: InstanceMethod: model :{model} attrib name: {name} (attrib value: {value}) constructor returned {rs}".format(model=self, name=name, value=attr, rs=rs))
                 return rs
 
             if attr.is_property:

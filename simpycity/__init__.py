@@ -1,5 +1,5 @@
 """
-    COPYRIGHT 2008 Command Prompt, Inc.
+    COPYRIGHT 2008-2016 Command Prompt, Inc.
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lessor General Public License as published by
     the Free Software Foundation.
@@ -23,15 +23,6 @@ InterfaceError = psycopg2.InterfaceError
 OperationalError = psycopg2.OperationalError
 ProgrammingError = psycopg2.ProgrammingError
 NotSupportedError = psycopg2.NotSupportedError
-
-# DataError            = None
-# DatabaseError        = None
-# IntegrityError       = None
-# InternalError        = None
-# InterfaceError       = None
-# OperationalError     = None
-# ProgrammingError     = None
-# NotSupportedError    = None
 
 
 class PermissionError(InternalError):
