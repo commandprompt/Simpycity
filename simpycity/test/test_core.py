@@ -24,8 +24,11 @@ def setUpModule():
 
     cfg = ConfigParser.ConfigParser()
     ini = cfg.read("test.ini")
-    assert(ini)
-
+    try:
+        assert(ini)
+    except AssertionError:
+        print("Run the tests from the test directory")
+        raise
     config.database =   cfg.get("simpycity","database")
     config.port =       cfg.get("simpycity","port")
     config.user =       cfg.get("simpycity","user")
@@ -36,7 +39,7 @@ def setUpModule():
     config.handle_factory = test_handle_factory
 
     # clean up state
-    h = open("test/sql/test_unload.sql","r")
+    h = open("sql/test_unload.sql","r")
     destroy_sql = h.read()
     h.close()
 
@@ -50,7 +53,7 @@ def setUpModule():
 class dbTest(unittest.TestCase):
 
     def setUp(self):
-        h = open("test/sql/test.sql","r")
+        h = open("sql/test.sql","r")
         create_sql = h.read()
         h.close()
 
@@ -65,7 +68,7 @@ class dbTest(unittest.TestCase):
         handle.rollback()
         #handle.close()
 
-        h = open("test/sql/test_unload.sql","r")
+        h = open("sql/test_unload.sql","r")
         destroy_sql = h.read()
         h.close()
 
