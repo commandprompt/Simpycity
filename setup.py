@@ -1,15 +1,18 @@
-try:
-    from setuptools import setup, find_packages
-except ImportError:
-    from ez_setup import use_setuptools
-    use_setuptools()
-    from setuptools import setup, find_packages
+from setuptools import setup, find_packages
+from codecs import open
+from os import path
+
+here = path.abspath(path.dirname(__file__))
+
+# Get the long description from the README file
+with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
+    long_description = f.read()
 
 setup(
     name='Simpycity',
     version='2.0.0',
     description='A database-respecting object-relational mapper for PostgreSQL.',
-    long_description="""Simpycity is an object-relational mapper. It seamlessly maps PostgreSQL query and function result sets to Python classes and class attributes. It allows for the easy and rapid development of query- and stored procedure-based data representations. Simpycity leverages PostgreSQL's powerful composite type system, and the advanced type handling of the psycopg2 database access library.""",
+    long_description=long_description,
     author='Command Prompt, Inc.',
     author_email='support@commandprompt.com',
     url='https://github.com/commandprompt/Simpycity',
