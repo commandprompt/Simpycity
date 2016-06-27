@@ -32,7 +32,7 @@ without compromising or complicating application design.
 Usage
 =====
 
-At its simplest, object-relation mapping looks like:
+At its simplest, object-relation mapping looks like::
 
     --SQL
     create table foo (id int, name text);
