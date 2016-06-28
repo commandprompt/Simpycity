@@ -1,5 +1,5 @@
 from simpycity import NotFoundError
-from simpycity.core import FunctionError, FunctionSingle, meta_query, Property
+from simpycity.core import FunctionError, meta_query
 from simpycity import config as g_config
 import psycopg2
 

@@ -4,8 +4,8 @@ Overview
 What Simpycity Is
 -----------------
 
-Simpycity is an object-relational mapper. It seamlessly maps PostgreSQL query and
-function result sets to Python classes and class attributes.
+Simpycity is an object-relational mapper. It seamlessly maps PostgreSQL query 
+and function result sets to Python classes and class attributes.
 
 It allows for the easy and rapid development of query- and
 stored procedure-based data representations. Simpycity leverages PostgreSQL's
@@ -15,17 +15,19 @@ database access library.
 What Simpycity is Not
 ---------------------
 
-Simpycity is not a query generator, and by default it does not support query
-generation. Simpycity is designed for developers who deeply understand SQL and
-desire to write the best possible SQL representations for their database.
+Simpycity is not a SQL generator and does not attempt to abstract or hide SQL. 
+Simpycity is designed for developers who deeply understand SQL and
+desire to write the best possible SQL representations for their database. 
+Simpycity also rejects the Active Record paradigm, whose simplistic patterns 
+fail in even moderately complex systems.
 
 Core Philosophy
 ---------------
 
 The core philosophy behind Simpycity is that the Database and the Application
 are separate entities, each with distinct abilities and design
-representations - the classic Object versus Relation argument.
-By providing a mechanism where a single business Object can easily represent
+representations; this echoe the classic Object versus Relation argument.
+It provides a mechanism where a single business Object can easily represent
 several Relations, and allow the base Relational layer to follow normal forms
 without compromising or complicating application design.
 
@@ -47,7 +49,7 @@ At its simplest, object-relation mapping looks like::
     print(my_foo.name)
     >>>one
 
-Read the tutorial for more narrative help. The doc directory also includes formal class documentation.
+Read the tutorial for more narrative help.
 
 License
 =======
