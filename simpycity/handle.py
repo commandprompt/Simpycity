@@ -1,3 +1,4 @@
+from __future__ import print_function
 import psycopg2.extras
 from simpycity import config as g_config
 from contextlib import contextmanager
@@ -5,7 +6,7 @@ from contextlib import contextmanager
 def d_out(text):
 
     if g_config.debug:
-        print text
+        print(text)
 
 
 class Cursor(psycopg2.extras.DictCursor):
@@ -38,9 +39,9 @@ class Cursor(psycopg2.extras.DictCursor):
         res = super(Cursor, self).__iter__()
         while True:
             if self.callback:
-                yield self.callback(res.next())
+                yield self.callback(next(res))
             else:
-                yield res.next()
+                yield next(res)
 
 
 class TypedCursor(Cursor):
@@ -73,7 +74,7 @@ class TypedCursor(Cursor):
     def __iter__(self):
         res = super(TypedCursor, self).__iter__()
         while True:
-            row = res.next()
+            row = next(res)
             if row and len(row) > 0:
                 yield row[0]
             else:
@@ -210,7 +211,7 @@ class Handle(object):
         try:
             if self.conn.get_backend_pid():
                 return True
-        except psycopg2.InterfaceError, e:
+        except psycopg2.InterfaceError as e:
             if str(e) == "connection already closed":
                 # We already lost our connection. Attempt to reforge it.
                 self.__reconnect__()

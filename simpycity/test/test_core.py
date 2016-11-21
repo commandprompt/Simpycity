@@ -1,3 +1,4 @@
+from __future__ import print_function
 import unittest
 from simpycity import config
 from simpycity.core import *
@@ -272,9 +273,9 @@ class FunctionTest(dbTest):
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except KeyError,e:
+            except KeyError as e:
                 pass
-            except Exception, e:
+            except Exception as e:
                 self.fail("Failed with exception: %s" %e)
 
 
@@ -287,9 +288,9 @@ class FunctionTest(dbTest):
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except KeyError,e:
+            except KeyError as e:
                 pass
-            except Exception, e:
+            except Exception as e:
                 self.fail("Failed with exception: %s" %e)
 
 class QueryTest(dbTest):
@@ -309,7 +310,7 @@ class QueryTest(dbTest):
         q = Query("test_table",['id'])
         try:
             cur = q(1)
-        except Exception, e:
+        except Exception as e:
             self.fail("Failed with exception %s" % e)
 
         self.assertEqual(cur.rowcount,1,"ResultSet has a single entry")
@@ -322,7 +323,7 @@ class QueryTest(dbTest):
         q = Query("test_table")
         try:
             cur = q(options=(dict(columns=['id'])))
-        except Exception, e:
+        except Exception as e:
             self.fail("Failed with exception %s" % e)
 
         self.assertEqual(cur.rowcount,3,"Partial Result Set has 3 entries, as expected.")
@@ -331,7 +332,7 @@ class QueryTest(dbTest):
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except KeyError,e:
+            except KeyError as e:
                 pass
 
     def testPartialWithArguments(self):
@@ -343,9 +344,9 @@ class QueryTest(dbTest):
             try:
                 a = row['value']
                 self.fail("Expected no value column, found value column of %s" % row['value'])
-            except KeyError,e:
+            except KeyError as e:
                 pass
-            except Exception, e:
+            except Exception as e:
                 self.fail("Failed with exception: %s" %e)
 
 class RawTest(dbTest):
@@ -355,7 +356,7 @@ class RawTest(dbTest):
         try:
             cur = r(1)
 
-        except Exception, e:
+        except Exception as e:
             self.fail("Failed with exception %s" % e)
 
         self.assertEqual(cur.rowcount, 1, "ResultSet has single entry.")

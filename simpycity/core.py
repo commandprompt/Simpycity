@@ -12,6 +12,7 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import print_function
 
 import psycopg2
 from simpycity import config, ProgrammingError
@@ -20,7 +21,7 @@ import simpycity.handle
 def d_out(text):
 
     if config.debug:
-        print text
+        print(text)
 
 
 class meta_query(object):
@@ -283,7 +284,7 @@ class FunctionSingle(Function):
     """
     def __call__(self, *in_args, **in_kwargs):
         cursor = super(FunctionSingle, self).__call__(*in_args, **in_kwargs)
-        if cursor.rowcount <> 1:
+        if cursor.rowcount != 1:
             raise Exception("Expect only a single row")
         row = cursor.fetchone()
         return row
@@ -369,7 +370,7 @@ class QuerySingle(Query):
     """
     def __call__(self, *in_args, **in_kwargs):
         cursor = super(QuerySingle, self).__call__(*in_args, **in_kwargs)
-        if cursor.rowcount <> 1:
+        if cursor.rowcount != 1:
             raise Exception("Expect only a single row")
         row = cursor.fetchone()
         return row

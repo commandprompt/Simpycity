@@ -1,3 +1,4 @@
+from __future__ import absolute_import
 port=None
 host=None
 database=None
@@ -23,5 +24,5 @@ def handle_factory(*args, **kwargs):
     It may be useful to redefine this function with one that returns an existing instance of Handle,
     so that your application only opens one -- or a controlled number of -- database connections.
     """
-    from handle import Handle
+    from .handle import Handle
     return Handle(*args, **kwargs)

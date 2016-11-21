@@ -1,3 +1,4 @@
+from __future__ import print_function
 from simpycity import NotFoundError
 from simpycity.core import FunctionError, meta_query
 from simpycity import config as g_config
@@ -6,7 +7,7 @@ import psycopg2
 def d_out(text):
 
     if g_config.debug:
-        print text
+        print(text)
 
 class Construct(object):
     config = None
@@ -144,7 +145,7 @@ class SimpleModel(Construct):
         row = None
         try:
             row = self.__load__(*args, **kwargs)
-        except psycopg2.InternalError, e:
+        except psycopg2.InternalError as e:
             d_out("pgerror=%s pgcode=%s diag=%s" % (e.pgerror, e.pgcode, e.diag))
             if not (e.pgcode == 'P0002'): # no_data_found
                 raise # as InternalError
