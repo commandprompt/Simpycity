@@ -1,8 +1,14 @@
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from builtins import zip
+from builtins import object
 from simpycity import NotFoundError
 from simpycity.core import FunctionError, meta_query
 from simpycity import config as g_config
 import psycopg2
+import sys
 
 def d_out(text):
 
@@ -306,7 +312,7 @@ class SimpleModel(Construct):
 
             def make(self, values):
                 d_out("CustomCompositeCaster.make: cls={0} values={1}".format(repr(cls), repr(values)))
-                return cls(**dict(zip(self.attnames, values)))
+                return cls(**dict(list(zip(self.attnames, values))))
 
         PG_TYPE_SQL = """SELECT array_agg(attname)
 FROM
@@ -335,6 +341,8 @@ FROM
                 d_out("SimpleModel.register_composite: after: table for {0} is {1}".format(repr(cls.pg_type), cls.table))
         if factory is None:
             factory = CustomCompositeCaster
+        if sys.version_info[0] < 3:
+            name = str(name)
         return psycopg2.extras.register_composite(
             name,
             handle.conn,

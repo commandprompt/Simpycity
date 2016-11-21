@@ -12,8 +12,14 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
 
+from builtins import str
+from builtins import range
+from builtins import object
 import psycopg2
 from simpycity import config, ProgrammingError
 import simpycity.handle
@@ -136,13 +142,13 @@ class meta_query(object):
         # Create a fixed-length array equal to the number of arguments
         # this instance requires.
 
-        call_list = ['' for x in xrange(len(self.args))]
+        call_list = ['' for x in range(len(self.args))]
 
         if in_kwargs:
             # Map the incoming keyword args positionally, based on the
             # position of argument names in the core argument list.
 
-            for arg in in_kwargs.iterkeys():
+            for arg in in_kwargs.keys():
                 try:
                     call_list[ self.args.index(arg) ] = in_kwargs[arg]
                 except ValueError:
@@ -270,7 +276,7 @@ class Function(meta_query):
             from_cl = ''
 
         if len(self.args) >= 1:
-            replace = ['%s' for x in xrange(len(self.args))]
+            replace = ['%s' for x in range(len(self.args))]
             func = "%s(" % self.query_base + ",".join(replace) + ")"
         else:
             func = "%s()" % self.query_base

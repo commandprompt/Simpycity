@@ -1,12 +1,19 @@
+from __future__ import absolute_import
+from __future__ import division
 from __future__ import print_function
+from __future__ import unicode_literals
+from future import standard_library
+standard_library.install_aliases()
 import unittest
 from simpycity import config
 from simpycity.core import *
 from simpycity.model import SimpleModel, Construct
 from psycopg2.extensions import cursor as _cursor
 import psycopg2
-
-import ConfigParser
+try:
+    import configparser
+except ImportError as e:
+    import ConfigParser as configparser
 
 handle = None
 
@@ -23,7 +30,7 @@ def test_handle_factory(*args, **kwargs):
 
 def setUpModule():
 
-    cfg = ConfigParser.ConfigParser()
+    cfg = configparser.ConfigParser()
     ini = cfg.read("test.ini")
     try:
         assert(ini)

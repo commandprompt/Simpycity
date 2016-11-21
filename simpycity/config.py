@@ -1,4 +1,8 @@
 from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+from __future__ import unicode_literals
+
 port=None
 host=None
 database=None
@@ -16,7 +20,7 @@ def dsn():
                'dbname': database,
                'user': user,
                'password': password}
-    return ' '.join(['{0}={1}'.format(_[0], _[1]) for _ in configs.iteritems() if _[1] is not None and _[1] != ''])
+    return ' '.join(['{0}={1}'.format(_[0], _[1]) for _ in configs.items() if _[1] is not None and _[1] != ''])
 
 def handle_factory(*args, **kwargs):
     """
