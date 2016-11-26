@@ -10,18 +10,19 @@ with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
 
 setup(
     name='Simpycity',
-    version='2.0.0',
+    version='2.0.1',
     description='A database-respecting object-relational mapper for PostgreSQL.',
     long_description=long_description,
     author='Command Prompt, Inc.',
     author_email='support@commandprompt.com',
     url='https://github.com/commandprompt/Simpycity',
-    download_url='https://github.com/commandprompt/Simpycity/releases/tag/2.0.0',
+    download_url='https://github.com/commandprompt/Simpycity/releases/tag/2.0.1',
     install_requires=[
+        "future",
         "psycopg2>=2.5"
     ],
     packages=find_packages(),
-    test_suite='nose.collector',
+    test_suite='simpycity.test',
     license='LGPL',
     include_package_data=True,
     zip_safe=False,
@@ -33,8 +34,11 @@ setup(
         "Topic :: Software Development :: Libraries :: Python Modules",
         "Topic :: Database",
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
+        'Programming Language :: Python :: 3.4',
+        'Programming Language :: Python :: 3.5',
         'Natural Language :: English'
     ],
     keywords='orm postgresql',

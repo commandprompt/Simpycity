@@ -10,6 +10,7 @@ from simpycity.core import *
 from simpycity.model import SimpleModel, Construct
 from psycopg2.extensions import cursor as _cursor
 import psycopg2
+import os.path
 try:
     import configparser
 except ImportError as e:
@@ -31,11 +32,12 @@ def test_handle_factory(*args, **kwargs):
 def setUpModule():
 
     cfg = configparser.ConfigParser()
-    ini = cfg.read("test.ini")
+    test_ini = os.path.join(os.path.dirname(__file__),"test.ini")
+    ini = cfg.read(test_ini)
     try:
         assert(ini)
     except AssertionError:
-        print("Run the tests from the test directory")
+        print("Could not read test.ini in the simpycity.test module")
         raise
     config.database =   cfg.get("simpycity","database")
     config.port =       cfg.get("simpycity","port")
@@ -47,7 +49,7 @@ def setUpModule():
     config.handle_factory = test_handle_factory
 
     # clean up state
-    h = open("sql/test_unload.sql","r")
+    h = open( os.path.join(os.path.dirname(__file__),"sql", "test_unload.sql"),"r")
     destroy_sql = h.read()
     h.close()
 
@@ -61,7 +63,8 @@ def setUpModule():
 class dbTest(unittest.TestCase):
 
     def setUp(self):
-        h = open("sql/test.sql","r")
+        setUpModule()
+        h = open( os.path.join(os.path.dirname(__file__),"sql", "test.sql"),"r")
         create_sql = h.read()
         h.close()
 
@@ -76,7 +79,7 @@ class dbTest(unittest.TestCase):
         handle.rollback()
         #handle.close()
 
-        h = open("sql/test_unload.sql","r")
+        h = open( os.path.join(os.path.dirname(__file__),"sql", "test_unload.sql"),"r")
         destroy_sql = h.read()
         h.close()
 
@@ -92,9 +95,9 @@ class ConstructTest(dbTest):
 
         instance = o()
         cur = instance.r()
-        self.failUnless(
+        self.assertTrue(
             isinstance(cur, _cursor),
-            "Construct function doers not return expected result type."
+            "Construct function does not return expected result type."
         )
 
     def testCreateConstruct(self):
@@ -189,7 +192,7 @@ class ModelTest(dbTest):
         model = SimpleUpdateModel(id=1)
         cur = model.update(new_value="Instance function test")
         # Now, the rs should have returned a single row
-        self.assertEquals(cur.rowcount,1,"Update returned a single row.")
+        self.assertEqual(cur.rowcount,1,"Update returned a single row.")
         row = cur.fetchone()
         self.assertEqual(row[0], True, "Did not successfully update, got %s" % row[0])
         model = SimpleUpdateModel(id=1)
@@ -258,7 +261,7 @@ class FunctionTest(dbTest):
     def testCreateFunction(self):
 
         f = Function("test")
-        self.failUnless(
+        self.assertTrue(
             isinstance(f, Function),
             "Isn't a Simpycity function object."
         )
@@ -305,7 +308,7 @@ class QueryTest(dbTest):
     def testBareQuery(self):
 
         q = Query("test_table")
-        self.failUnless(
+        self.assertTrue(
             isinstance(q, Query),
             "Return from query creation is of type sql_function."
         )
@@ -412,5 +415,4 @@ class DynamicModel(SimpleModel):
     pg_type = ('public','test_table')
 
 if __name__ == '__main__':
-    setUpModule()
     unittest.main()
