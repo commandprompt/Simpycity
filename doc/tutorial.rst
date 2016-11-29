@@ -1,3 +1,8 @@
+Simpycity Tutorial
+==================
+
+You may wish to read the Simpycity README_ first.
+
 This tutorial walks you through a simple console program that displays information about animals. First, we have one table in a database of animals::
 
     create table animal
@@ -11,7 +16,7 @@ This tutorial walks you through a simple console program that displays informati
 
 
 Basic Models
-============
+------------
 
 Our Python model library will start like this::
 
@@ -47,7 +52,7 @@ And its output is *"racoon"*. When the ``Animal`` object is instantiated, the ``
 
 
 Querying Models
-===============
+---------------
 
 Data accessor methods can easily be added to our SimpleModel.  Here is a silly ``mammals`` function in sql::
 
@@ -79,7 +84,7 @@ Soon we'll see how to return Python class instances in result sets instead of si
 
 
 Database Connections and Handles
-================================
+--------------------------------
 
 When your code is running a bunch of queries, you normally want them running in a single connection and often in a single transaction. The type-mapping feature described in the next section depends on the app utilizing a single connection.
 
@@ -96,7 +101,7 @@ Now, any Simpycity object that needs a handle will use the one that has already 
 
 
 Mapping SQL Types to Python Classes
-===================================
+-----------------------------------
 
 Returning lists from a query is a weak form of mapping. We can return Python classes from our queries instead. In our main script before the line instantiating ``animal`` we add::
 
@@ -145,7 +150,7 @@ The script output will remain identical.
 
 
 Type and Class Inheritance
-==========================
+--------------------------
 
 Of course Python supports class inheritance and this feature is extremely powerful and useful. Many people don't realize that PostgreSQL also supports it. Simpycity maps the two together::
 
@@ -205,3 +210,5 @@ In the main script be sure to register this class *after* the superclass::
     >>>tyranosaurus rex, chomp!
     >>>Victim: mule deer
     >>>Victim: elephant
+
+.. _README: README.html

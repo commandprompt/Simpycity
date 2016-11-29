@@ -1,17 +1,17 @@
-"""
-    COPYRIGHT 2009-2016 Command Prompt, Inc.
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation.
 
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
+#COPYRIGHT 2009-2016 Command Prompt, Inc.
+#This program is free software: you can redistribute it and/or modify
+#it under the terms of the GNU Lesser General Public License as published by
+#the Free Software Foundation.
 
-    You should have received a copy of the GNU General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
+#This program is distributed in the hope that it will be useful,
+#but WITHOUT ANY WARRANTY; without even the implied warranty of
+#MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#GNU General Public License for more details.
+
+#You should have received a copy of the GNU General Public License
+#along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -31,30 +31,25 @@ def d_out(text):
 
 
 class meta_query(object):
-
     """
     Base object for sql query-like objects For internal use only.
     """
 
     def __init__(self, name, args=[], handle=None, callback=None):
-
         """
-
-         :name    Sets the base name of the query. How this is used will be
+         :param str name:  Sets the base name of the query. How this is used will be
                     declared in the implementing subclass. For instance, in
                     the Function subclass, name is the name of the stored
                     procedure itself. In the case of Raw, it is the entire
                     query.
-         :args    A base empty list, declaring the arguments, if any, that
+         :param list args:  A base empty list, declaring the arguments, if any, that
                     this query requires.
-
-         :handle   Instead of creating a new handle to run this query,
+         :param simpycity.handle.Handle handle:  Instead of creating a new handle to run this query,
                     utilize the provided handle. This is handled implicitly
                     by the SimpleModel.
-
-         :callback  Each row returned by the cursor will be passed to this function, which must return the row.
+         :param function callback:  Each row returned by the cursor will be passed to this function, which must return the row.
                       The function is applied to the psycopg row as returned by psycopg, before any other Simpycity handling.
-                      Can be overriden on call-to-call basis via options= of the  __call__ methond.
+                      Can be overriden on call-to-call basis via options parameter of the  *__call__* methond.
         """
 
         self.query_base = name
@@ -73,12 +68,14 @@ class meta_query(object):
         Calling the function in this method causes the core SQL to be run and
         a ResultSet returned.
 
-        :param options: A dict, which responds to the following
+        :param dict options: A dict, which responds to the following
         keys:
+
         * columns: Alters what columns are selected by the query.
         * handle: Overrides the instance handle with a customized version.
         * callback: Override the instance callback with a customized version.
-        :return psycopg2 cursor
+
+        :return: psycopg2 cursor
         """
 
         d_out("meta_query.__call__: query is %s" % self.query_base)
@@ -166,8 +163,8 @@ class meta_query(object):
     @property
     def is_property(self):
         """
-        Override this for special handling in SimpleModel.__getattribute__
-        If True, __call__ will be executed if a reference is made to a SimpleModel attribute
+        Override this for special handling in *simpycity.model.SimpleModel.__getattribute__*
+        If ``True``, *__call__* will be executed if a reference is made to a SimpleModel attribute
         that is this instance.
         """
         return False
@@ -175,7 +172,15 @@ class meta_query(object):
     def form_query(self, columns, options={}):
         """Subclass function to create the query based on the columns
         provided at instance time.
-        :return sql string
+        :param list columns: List of columns to return
+        :param dict options: A dict, which responds to the following
+        keys:
+
+        * columns: Alters what columns are selected by the query.
+        * handle: Overrides the instance handle with a customized version.
+        * callback: Override the instance callback with a customized version.
+
+        :return: sql string
         """
         pass
 
@@ -189,11 +194,11 @@ class meta_query(object):
     def __execute__(self, columns, call_list, handle=None, callback=None, extra_opt={}):
         '''
         Runs the stored query in a psycopg2 cursor based on the arguments provided to
-        __call__.
-        If the instance handle is None and also the handle parameter is none, a handle
-        is created from config.handle_factory().
-        :param extra_opt: a dict passed to form_query
-        :return psycopg2 cursor
+        *__call__*.
+        If the instance handle is ``None`` and also the handle parameter is ``None``, a handle
+        is created from *simpycity.config.handle_factory*.
+        :param dict extra_opt: a dict passed to *form_query*
+        :return: psycopg2 cursor
         '''
 
         query = self.form_query(columns, options=extra_opt)
@@ -252,9 +257,9 @@ class Function(meta_query):
     """
     def __init__(self, *args, **kwargs):
         """
-        :param name: sql function name
-        :param args: list of sql argument names
-        :param direct: perform direct query "SELECT func(args...)" when True,
+        :param str name: sql function name
+        :param list args: list of sql argument names
+        :param boolean direct: perform direct query "SELECT func(args...)" when True,
                  vs. "SELECT * FROM func(args...)" when False (default.)
         """
         self.direct = kwargs.pop('direct', False)
@@ -262,9 +267,9 @@ class Function(meta_query):
 
     def form_query(self, columns, options={}):
         """
-        :param columns: literal sql string for list of columns
-        :param options: dict supporting a single key "direct" as in the constructor
-        :return sql string
+        :param str columns: literal sql string for list of columns
+        :param dict options: dict supporting a single key "direct" as in the constructor
+        :return: sql string
         """
         from_cl = 'FROM'
 
@@ -329,7 +334,7 @@ class Raw(meta_query):
     """
     def __init__(self, name, args=[], handle=None, callback=None):
         """
-        :param name: The raw sql
+        :param str name: The raw sql
         :param args: noop
         :param handle: see superclass
         :param callback: see superclass
@@ -346,8 +351,8 @@ class Query(meta_query):
     """
     def __init__(self, name, args=[], handle=None, callback=None):
         """
-        :param name: table or view name
-        :param args: list of column names used in sql WHERE clause
+        :param str name: table or view name
+        :param list args: list of column names used in sql WHERE clause
         :param handle: see superclass
         :param callback: see superclass
         """

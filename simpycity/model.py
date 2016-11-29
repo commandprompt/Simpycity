@@ -23,6 +23,8 @@ class Construct(object):
         A Construct is a basic datatype for Simpycity - basically providing
         a framework that allows for all queries in the Construct to operate
         under a single logical transaction.
+        :param config: Override global *simpycity.config*
+        :param handle: Override global handle, if any
         """
 
         d_out("Construct.__init__: config=%s, handle=%s" % (config, handle))
@@ -62,19 +64,22 @@ class SimpleModel(Construct):
     """
     The basic simple model class.
     Implements the barest minimum of Model functionality to operate.
-
-    The SimpleModel expects a table=[] to declare its columns. However if you leave table an empty list and
-    define pg_type as a tuple of two members (schema, type) then
-    register_composite() will calculate table with a query to Postgres at runtime.
     SimpleModel expects one of:
-    * __load__ to be a FunctionSingle or QuerySingle that loads an instance, based on primary key, from the database.
-    * __lazyload__ to be a FunctionSingle that loads an instance from the database, depending on the existance of a value for
-      loaded_indicator, which should be a member of table that will only be populated after the instance is fully loaded.
 
+    * __load__ to be a *FunctionSingle* or *QuerySingle* that loads an instance, based on primary key, from the database.
+    * __lazyload__ to be a *FunctionSingle* that loads an instance from the database, depending on the existance of a value for
+      *loaded_indicator*, which should be a member of *table* that will only be populated after the instance is fully loaded.
     """
 
     pg_type = None
+    """
+    If *table* is empty and this is a tuple of two members (schema, type) then
+    *register_composite()* will calculate *table* by executing a query to Postgres at runtime.
+    """
     table = []
+    """
+    Declare a list of columns to become class attributes. Or leave empty, and define *pg_type*.
+    """
 
     def __init__(self, *args, **kwargs):
         """
@@ -182,9 +187,9 @@ class SimpleModel(Construct):
         """
         Private method.
 
-        This function tests all attributes of the SimpleModel if they are
-        instances of meta_query.
-        If they are a meta_query, columns from the Model are mapped
+        This function tests all attributes of the *SimpleModel* if they are
+        instances of *meta_query*.
+        If they are a *meta_query*, columns from the Model are mapped
         to the InstanceMethods' arguments, as appropriate.
         """
 
@@ -266,7 +271,10 @@ class SimpleModel(Construct):
 
     def save(self):
 
-        """Performs the __save__ method, if it has been declared.
+        """
+        *DEPRECATED*
+
+        Performs the __save__ method, if it has been declared.
         If not, this function raises a CannotSave exception.
         .save() does *not* implicitly commit the model.
         To commit, it must be done manually."""
@@ -289,8 +297,8 @@ class SimpleModel(Construct):
     @classmethod
     def register_composite(cls, name, handle=None, factory=None):
         """
-        Maps a Postgresql type to this class.  If the class's table attribute
-        is empty, and the class has an attribute pg_type of tuple (schema, type),
+        Maps a Postgresql type to this class.  If the class's *table* attribute
+        is empty, and the class has an attribute *pg_type* of tuple (schema, type),
         it is calculated and set by querying Postgres. Register inherited/inheriting
         classes in heirarchical order.
         Every time a SQL function returns a registered type (including array
@@ -300,12 +308,12 @@ class SimpleModel(Construct):
         The object attributes will be passed to the provided callable in
         a form of keyword arguments.
 
-        :param name: the name of a PostgreSQL composite type, e.g. created using
-            the |CREATE TYPE|_ command
-        :param handle: Simpycity handle
-        :param factory: if specified it should be a `psycopg2.extras.CompositeCaster` subclass: use
-            it to :ref:`customize how to cast composite types <custom-composite>`
-        :return: the registered `CompositeCaster` or *factory* instance
+        :param str name: the name of a PostgreSQL composite type, e.g. created using
+            the *CREATE TYPE* command
+        :param simpycity.handle.Handle handle:
+        :param psycopg2.extras.CompositeCaster factory: use
+            it to customize how to cast composite types
+        :return: the registered *CompositeCaster* instance
             responsible for the conversion
         """
         class CustomCompositeCaster(psycopg2.extras.CompositeCaster):
@@ -353,9 +361,7 @@ FROM
     @staticmethod
     def merge_base_attrs(attrs):
         """
-        If one of the attrs is named "base_", assume that attribute is an instance of SimpleModel mapped on a Postgresql
-        composite type, and that the base_ instance is of a superclass of this class. Expand the attributes of the
-        base_ type and assign to class attributes.
+        :param dict attrs: If one of the attrs is named "base\_", assume that attribute is an instance of SimpleModel mapped on a Postgresql composite type, and that the base\_ instance is of a superclass of this class. Expand the attributes of the base\_ type and assign to class attributes.
 
         psycopg2's type casting uses namedtuple() and that forbids a
         name to start with underscore, so we end it with _ instead

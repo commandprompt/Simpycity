@@ -20,6 +20,9 @@ class Cursor(psycopg2.extras.DictCursor):
     Add per-row callback option to standard cursor.
     """
     def __init__(self, *args, **kwargs):
+        """
+        :param function callback: each row will be passed to this function, which must return a row
+        """
         self.callback = kwargs.pop('callback', None)
         super(Cursor, self).__init__(*args, **kwargs)
 
@@ -86,7 +89,6 @@ class TypedCursor(Cursor):
             else:
                 yield row
 
-
 class Handle(object):
 
     """
@@ -95,7 +97,12 @@ class Handle(object):
     """
 
     def __init__(self, dsn=None, config=None, isolation_level=None):
-
+        """
+        Open a psycopg2 connection.
+        :param str dsn: Override config.dsn()
+        :param config: Override global config
+        :param isolation_level int: A Postgresql isolation_level: one of 0, 1, 2. See psycopg2 connection docs.
+        """
         self.conn = None
 
         self.config = config or g_config
@@ -119,6 +126,10 @@ class Handle(object):
         self.conn = psycopg2.connect(self.dsn)
 
     def cursor(self,*args,**kwargs):
+        """
+        :param cursor_factory: Override default Cursor
+        :return: psycopg2 cursor
+        """
         d_out("Handle.cursor: Creating cursor..")
         if not self.open:
             raise Exception("Connection isn't open.")
@@ -181,6 +192,9 @@ class Handle(object):
 
     @contextmanager
     def transaction(self):
+        """
+        A generator function
+        """
         try:
             self.begin()
             yield
@@ -214,6 +228,11 @@ class Handle(object):
 
     @property
     def open(self):
+        """
+        Open the connection if not already open.
+
+        :return: True
+        """
         try:
             if self.conn.get_backend_pid():
                 return True
