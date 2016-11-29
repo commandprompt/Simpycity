@@ -1,0 +1,1 @@
+recursive-include simpycity/test *.ini *.sql
